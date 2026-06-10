@@ -34,6 +34,14 @@ abstract class AppColors {
   // ── Divider / border ──────────────────────────────────────────────────────
   static const Color divider = Color(0xFF253D52);
 
+  // ── Aliases (for compatibility with newer screens) ────────────────────────
+  static const Color primaryOrange = primary;
+  static const Color primaryText = textPrimary;
+  static const Color secondaryText = textSecondary;
+  static const Color dividerColor = divider;
+  static const Color successGreen = success;
+  static const Color errorRed = error;
+
   // ── Light theme equivalents (for future light mode support) ───────────────
   static const Color backgroundLight = Color(0xFFF5F7FA);
   static const Color surfaceLight = Color(0xFFFFFFFF);

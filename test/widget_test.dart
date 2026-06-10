@@ -18,7 +18,7 @@ void main() {
       expect(find.byType(BottomNavigationBar), findsOneWidget);
       
       // Verify 3 tabs
-      expect(find.byType(BottomNavigationBarItem), findsWidgetCount(3));
+      expect(find.byType(BottomNavigationBarItem), findsNWidgets(3));
     });
 
     testWidgets('Tab switching works - Overview tab', (WidgetTester tester) async {
@@ -71,7 +71,7 @@ void main() {
       await tester.pumpAndSettle();
       
       // Verify SummaryCard widgets exist
-      expect(find.byType(SummaryCard), findsWidgetCount(4));
+      expect(find.byType(SummaryCard), findsNWidgets(4));
     });
 
     testWidgets('Battery card displays progress', (WidgetTester tester) async {

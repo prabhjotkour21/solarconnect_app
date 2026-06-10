@@ -382,25 +382,27 @@ class _SettingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.primaryOrange),
-      title: Text(title, style: AppTextStyles.bodyLarge),
-      subtitle: subtitle != null
-          ? Text(subtitle!, style: AppTextStyles.bodySmall)
-          : null,
-      trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right) : null),
-      onTap: onTap,
-      tileColor: AppColors.cardDark,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.paddingLG,
-        vertical: 8,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-      ),
-      margin: const EdgeInsets.symmetric(
+    return Padding(
+      padding: const EdgeInsets.symmetric(
         horizontal: AppConstants.paddingLG,
         vertical: 4,
+      ),
+      child: ListTile(
+        leading: Icon(icon, color: AppColors.primaryOrange),
+        title: Text(title, style: AppTextStyles.bodyLarge),
+        subtitle: subtitle != null
+            ? Text(subtitle!, style: AppTextStyles.bodySmall)
+            : null,
+        trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right) : null),
+        onTap: onTap,
+        tileColor: AppColors.cardDark,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.paddingLG,
+          vertical: 8,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        ),
       ),
     );
   }
@@ -417,23 +419,25 @@ class _LanguageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.language, color: AppColors.primaryOrange),
-      title: Text('Language', style: AppTextStyles.bodyLarge),
-      subtitle: Text(selectedLanguage, style: AppTextStyles.bodySmall),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () => _showLanguageDialog(context),
-      tileColor: AppColors.cardDark,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.paddingLG,
-        vertical: 8,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-      ),
-      margin: const EdgeInsets.symmetric(
+    return Padding(
+      padding: const EdgeInsets.symmetric(
         horizontal: AppConstants.paddingLG,
         vertical: 4,
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.language, color: AppColors.primaryOrange),
+        title: Text('Language', style: AppTextStyles.bodyLarge),
+        subtitle: Text(selectedLanguage, style: AppTextStyles.bodySmall),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => _showLanguageDialog(context),
+        tileColor: AppColors.cardDark,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.paddingLG,
+          vertical: 8,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        ),
       ),
     );
   }

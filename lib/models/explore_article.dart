@@ -141,7 +141,7 @@ class ExploreArticle {
           '• Smart charging controller\n'
           '• Level 2 charger recommended\n\n'
           'Cost Savings:\n'
-          '• Eliminate fuel costs ($0.03/mile vs $0.15/mile)\n'
+          '• Eliminate fuel costs (\$0.03/mile vs \$0.15/mile)\n'
           '• Payback period: 5-7 years\n'
           '• 25+ year system lifespan\n\n'
           'Optimization Tips:\n'
