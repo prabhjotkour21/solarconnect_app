@@ -70,7 +70,7 @@ class AppDialogs {
                   },
                   child: Icon(
                     Icons.star,
-                    color: AppColors.primaryOrange,
+                    color: AppColors.primary,
                     size: 40,
                   ),
                 ),
@@ -154,7 +154,7 @@ class AppDialogs {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: AppColors.successGreen,
+        backgroundColor: AppColors.success,
         duration: const Duration(seconds: 2),
       ),
     );
@@ -165,7 +165,7 @@ class AppDialogs {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: AppColors.errorRed,
+        backgroundColor: AppColors.error,
         duration: const Duration(seconds: 2),
       ),
     );
@@ -193,7 +193,7 @@ class AppDialogs {
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primaryOrange,
+              backgroundColor: AppColors.primary,
             ),
             child: Text(confirmText),
           ),
@@ -229,7 +229,7 @@ class _ShareOption extends StatelessWidget {
             ),
             child: Icon(
               icon,
-              color: AppColors.primaryOrange,
+              color: AppColors.primary,
               size: 28,
             ),
           ),

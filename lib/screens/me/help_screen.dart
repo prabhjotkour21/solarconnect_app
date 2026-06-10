@@ -58,7 +58,7 @@ class _HelpScreenState extends State<HelpScreen> {
           style: AppTextStyles.headingLarge,
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primaryText),
+          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -224,7 +224,7 @@ class _HelpScreenState extends State<HelpScreen> {
               ),
               child: const Text(
                 'Support Agent: Hi! How can I help you today?',
-                style: TextStyle(color: AppColors.primaryText),
+                style: TextStyle(color: AppColors.textPrimary),
               ),
             ),
             const SizedBox(height: AppConstants.paddingMD),

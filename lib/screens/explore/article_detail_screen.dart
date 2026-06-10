@@ -20,12 +20,12 @@ class ArticleDetailScreen extends StatelessWidget {
         backgroundColor: AppColors.surfaceDark,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primaryText),
+          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share, color: AppColors.primaryText),
+            icon: const Icon(Icons.share, color: AppColors.textPrimary),
             onPressed: () => _showShareDialog(context),
           ),
         ],
@@ -83,26 +83,26 @@ class ArticleDetailScreen extends StatelessWidget {
                       Icon(
                         Icons.schedule,
                         size: 16,
-                        color: AppColors.secondaryText,
+                        color: AppColors.textSecondary,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         article.readTime,
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.secondaryText,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                       const SizedBox(width: 24),
                       Icon(
                         Icons.person,
                         size: 16,
-                        color: AppColors.secondaryText,
+                        color: AppColors.textSecondary,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         article.author,
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.secondaryText,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ],
@@ -111,14 +111,14 @@ class ArticleDetailScreen extends StatelessWidget {
                   Text(
                     article.publishDate,
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.secondaryText,
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
               ),
             ),
 
-            const Divider(color: AppColors.dividerColor, height: 1),
+            const Divider(color: AppColors.divider, height: 1),
 
             // Content
             Padding(
@@ -141,7 +141,7 @@ class ArticleDetailScreen extends StatelessWidget {
                   icon: const Icon(Icons.share),
                   label: const Text('Share This Article'),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primaryOrange,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       vertical: AppConstants.paddingMD,
@@ -244,7 +244,7 @@ class _ShareOption extends StatelessWidget {
             ),
             child: Icon(
               icon,
-              color: AppColors.primaryOrange,
+              color: AppColors.primary,
               size: 28,
             ),
           ),
