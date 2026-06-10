@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../utils/app_constants.dart';
+import '../../utils/app_state_manager.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -11,10 +12,16 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  late final AppStateManager _stateManager;
   bool _notificationsEnabled = true;
-  bool _darkModeEnabled = true;
-  String _selectedLanguage = 'English';
-  bool _privacyAgreed = true;
+  late String _selectedLanguage;
+
+  @override
+  void initState() {
+    super.initState();
+    _stateManager = AppStateManager();
+    _selectedLanguage = _stateManager.selectedLanguage;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           style: AppTextStyles.headingLarge,
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primaryText),
+          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -45,7 +52,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onChanged: (value) {
                 setState(() => _notificationsEnabled = value);
               },
-              activeColor: AppColors.primaryOrange,
+              activeColor: AppColors.primary,
             ),
           ),
           _SettingTile(
@@ -55,7 +62,322 @@ class _SettingsScreenState extends State<SettingsScreen> {
             trailing: Switch(
               value: true,
               onChanged: (_) {},
-              activeColor: AppColors.primaryOrange,
+              activeColor: AppColors.primary,
+            ),
+          ),
+
+          // Display Section
+          _SectionHeader('Display'),
+          _SettingTile(
+            icon: Icons.dark_mode,
+            title: 'Dark Mode',
+            subtitle: 'Theme: Dark',
+            trailing: Switch(
+              value: _stateManager.isDarkMode,
+              onChanged: (value) async {
+                await _stateManager.setTheme(value);
+                setState(() {});
+              },
+              activeColor: AppColors.primary,
+            ),
+          ),
+
+          // Language Section
+          _SectionHeader('Language'),
+          _LanguageTile(
+            selectedLanguage: _selectedLanguage,
+            onChanged: (language) async {
+              await _stateManager.setLanguage(language);
+              setState(() => _selectedLanguage = language);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('✅ Language changed to $language'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              }
+            },
+          ),
+
+          // Data Section
+          _SectionHeader('Data & Storage'),
+          _SettingTile(
+            icon: Icons.storage,
+            title: 'Cache Size',
+            subtitle: '245 MB',
+            onTap: () => _showClearCacheDialog(),
+          ),
+          _SettingTile(
+            icon: Icons.download,
+            title: 'Export Data',
+            subtitle: 'Download your energy data as CSV',
+            onTap: () => _showExportDialog(),
+          ),
+
+          // Privacy Section
+          _SectionHeader('Privacy & Security'),
+          _SettingTile(
+            icon: Icons.privacy_tip,
+            title: 'Privacy Policy',
+            onTap: () => _showPrivacyDialog(),
+          ),
+          _SettingTile(
+            icon: Icons.description,
+            title: 'Terms of Service',
+            onTap: () => _showTermsDialog(),
+          ),
+          _SettingTile(
+            icon: Icons.lock,
+            title: 'Change Password',
+            onTap: () => _showPasswordDialog(),
+          ),
+
+          // About Section
+          _SectionHeader('About'),
+          _SettingTile(
+            icon: Icons.info,
+            title: 'App Version',
+            subtitle: 'SolarConnect v1.0.0',
+          ),
+          _SettingTile(
+            icon: Icons.code,
+            title: 'Build Number',
+            subtitle: '2026.06.10.001',
+          ),
+
+          const SizedBox(height: AppConstants.paddingXL),
+        ],
+      ),
+    );
+  }
+
+  void _showClearCacheDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardDark,
+        title: Text('Clear Cache?', style: AppTextStyles.headingMedium),
+        content: Text(
+          'This will clear temporary data and free up 245 MB of space.',
+          style: AppTextStyles.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('✅ Cache cleared successfully'),
+                  backgroundColor: Color(0xFF4CAF82),
+                ),
+              );
+            },
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showExportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardDark,
+        title: Text('Export Data', style: AppTextStyles.headingMedium),
+        content: Text(
+          'Export your energy data for the last 12 months as CSV file?',
+          style: AppTextStyles.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('✅ Data exported: SolarConnect_2026.csv'),
+                  backgroundColor: Color(0xFF4CAF82),
+                ),
+              );
+            },
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Export'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacyDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardDark,
+        title: Text('Privacy Policy', style: AppTextStyles.headingMedium),
+        content: SingleChildScrollView(
+          child: Text(
+            'SolarConnect is committed to protecting your privacy. '
+            'We collect minimal data necessary to provide our services. '
+            'Your energy data is encrypted and never shared with third parties.\n\n'
+            'Last updated: June 2026',
+            style: AppTextStyles.bodyMedium,
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Understood'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTermsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardDark,
+        title: Text('Terms of Service', style: AppTextStyles.headingMedium),
+        content: SingleChildScrollView(
+          child: Text(
+            'By using SolarConnect, you agree:\n\n'
+            '• You own all data you generate\n'
+            '• Service provided as-is\n'
+            '• You maintain system responsibility\n'
+            '• Terms may be updated anytime\n\n'
+            'Last updated: June 2026',
+            style: AppTextStyles.bodyMedium,
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Accept'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPasswordDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardDark,
+        title: Text('Change Password', style: AppTextStyles.headingMedium),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              obscureText: true,
+              style: const TextStyle(color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Current Password',
+                hintStyle: const TextStyle(color: AppColors.textSecondary),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: AppColors.divider),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppConstants.paddingMD),
+            TextField(
+              obscureText: true,
+              style: const TextStyle(color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'New Password',
+                hintStyle: const TextStyle(color: AppColors.textSecondary),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: AppColors.divider),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('✅ Password updated'),
+                  backgroundColor: Color(0xFF4CAF82),
+                ),
+              );
+            },
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.backgroundDark,
+      appBar: AppBar(
+        backgroundColor: AppColors.surfaceDark,
+        elevation: 0,
+        title: Text(
+          'Settings',
+          style: AppTextStyles.headingLarge,
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: ListView(
+        children: [
+          // Notifications Section
+          _SectionHeader('Notifications'),
+          _SettingTile(
+            icon: Icons.notifications,
+            title: 'Push Notifications',
+            subtitle: 'Receive alerts for energy insights',
+            trailing: Switch(
+              value: _notificationsEnabled,
+              onChanged: (value) {
+                setState(() => _notificationsEnabled = value);
+              },
+              activeColor: AppColors.primary,
+            ),
+          ),
+          _SettingTile(
+            icon: Icons.schedule,
+            title: 'Daily Summary',
+            subtitle: 'Get daily energy report at 6 PM',
+            trailing: Switch(
+              value: true,
+              onChanged: (_) {},
+              activeColor: AppColors.primary,
             ),
           ),
 
@@ -70,7 +392,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onChanged: (value) {
                 setState(() => _darkModeEnabled = value);
               },
-              activeColor: AppColors.primaryOrange,
+              activeColor: AppColors.primary,
             ),
           ),
 
@@ -358,7 +680,7 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title,
         style: AppTextStyles.labelLarge.copyWith(
-          color: AppColors.secondaryText,
+          color: AppColors.textSecondary,
         ),
       ),
     );
@@ -382,27 +704,25 @@ class _SettingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
+    return ListTile(
+      leading: Icon(icon, color: AppColors.primaryOrange),
+      title: Text(title, style: AppTextStyles.bodyLarge),
+      subtitle: subtitle != null
+          ? Text(subtitle!, style: AppTextStyles.bodySmall)
+          : null,
+      trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right) : null),
+      onTap: onTap,
+      tileColor: AppColors.cardDark,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.paddingLG,
+        vertical: 8,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+      ),
+      margin: const EdgeInsets.symmetric(
         horizontal: AppConstants.paddingLG,
         vertical: 4,
-      ),
-      child: ListTile(
-        leading: Icon(icon, color: AppColors.primaryOrange),
-        title: Text(title, style: AppTextStyles.bodyLarge),
-        subtitle: subtitle != null
-            ? Text(subtitle!, style: AppTextStyles.bodySmall)
-            : null,
-        trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right) : null),
-        onTap: onTap,
-        tileColor: AppColors.cardDark,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppConstants.paddingLG,
-          vertical: 8,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        ),
       ),
     );
   }
@@ -419,25 +739,23 @@ class _LanguageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
+    return ListTile(
+      leading: const Icon(Icons.language, color: AppColors.primaryOrange),
+      title: Text('Language', style: AppTextStyles.bodyLarge),
+      subtitle: Text(selectedLanguage, style: AppTextStyles.bodySmall),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => _showLanguageDialog(context),
+      tileColor: AppColors.cardDark,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.paddingLG,
+        vertical: 8,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+      ),
+      margin: const EdgeInsets.symmetric(
         horizontal: AppConstants.paddingLG,
         vertical: 4,
-      ),
-      child: ListTile(
-        leading: const Icon(Icons.language, color: AppColors.primaryOrange),
-        title: Text('Language', style: AppTextStyles.bodyLarge),
-        subtitle: Text(selectedLanguage, style: AppTextStyles.bodySmall),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => _showLanguageDialog(context),
-        tileColor: AppColors.cardDark,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppConstants.paddingLG,
-          vertical: 8,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-        ),
       ),
     );
   }
@@ -463,7 +781,7 @@ class _LanguageTile extends StatelessWidget {
                         onChanged(value!);
                         Navigator.pop(context);
                       },
-                      activeColor: AppColors.primaryOrange,
+                      activeColor: AppColors.primary,
                     ),
                   ))
               .toList(),
