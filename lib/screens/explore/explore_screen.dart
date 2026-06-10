@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/explore_article.dart';
+import '../../routes/app_routes.dart';
+import '../../screens/explore/article_detail_screen.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../utils/app_constants.dart';
@@ -51,7 +53,19 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
             sliver: SliverList.builder(
               itemCount: _filtered.length,
-              itemBuilder: (_, i) => ArticleCard(article: _filtered[i]),
+              itemBuilder: (_, i) => GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ArticleDetailScreen(
+                        article: _filtered[i],
+                      ),
+                    ),
+                  );
+                },
+                child: ArticleCard(article: _filtered[i]),
+              ),
             ),
           ),
         ],

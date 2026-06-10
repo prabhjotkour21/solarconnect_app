@@ -2,9 +2,60 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../utils/app_constants.dart';
+import '../../utils/app_dialogs.dart';
+import 'settings_screen.dart';
+import 'help_screen.dart';
 
 class MeScreen extends StatelessWidget {
   const MeScreen({super.key});
+
+  void _handleMenuTap(BuildContext context, String item) {
+    switch (item) {
+      case 'FAQ':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const HelpScreen()),
+        );
+        break;
+      case 'Contact Support':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const HelpScreen()),
+        );
+        break;
+      case 'User Guide':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const HelpScreen()),
+        );
+        break;
+      case 'Notifications':
+      case 'Appearance':
+      case 'Language':
+      case 'Privacy':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SettingsScreen()),
+        );
+        break;
+      case 'Share App':
+        AppDialogs.showShareDialog(context);
+        break;
+      case 'Rate Us':
+        AppDialogs.showRateDialog(context);
+        break;
+      case 'Sign Out':
+        _handleLogout(context);
+        break;
+    }
+  }
+
+  void _handleLogout(BuildContext context) async {
+    final confirmed = await AppDialogs.showLogoutDialog(context);
+    if (confirmed == true) {
+      AppDialogs.showSuccessSnackBar(context, 'Signed out successfully');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,26 +82,35 @@ class MeScreen extends StatelessWidget {
                 _SystemInfoCard(),
                 const SizedBox(height: AppConstants.paddingMD),
                 _SectionLabel('Help & Support'),
-                _MenuGroup(items: const [
-                  _MenuItem(Icons.help_outline_rounded, 'FAQ', 'Common questions answered'),
-                  _MenuItem(Icons.chat_bubble_outline_rounded, 'Contact Support', 'Get help from our team'),
-                  _MenuItem(Icons.description_outlined, 'User Guide', 'How to use SolarConnect'),
-                ]),
+                _MenuGroup(
+                  items: const [
+                    _MenuItem(Icons.help_outline_rounded, 'FAQ', 'Common questions answered'),
+                    _MenuItem(Icons.chat_bubble_outline_rounded, 'Contact Support', 'Get help from our team'),
+                    _MenuItem(Icons.description_outlined, 'User Guide', 'How to use SolarConnect'),
+                  ],
+                  onItemTap: (item) => _handleMenuTap(context, item),
+                ),
                 const SizedBox(height: AppConstants.paddingMD),
                 _SectionLabel('Settings'),
-                _MenuGroup(items: const [
-                  _MenuItem(Icons.notifications_outlined, 'Notifications', 'Alerts and reminders'),
-                  _MenuItem(Icons.palette_outlined, 'Appearance', 'Theme and display'),
-                  _MenuItem(Icons.language_outlined, 'Language', 'English'),
-                  _MenuItem(Icons.privacy_tip_outlined, 'Privacy', 'Data and permissions'),
-                ]),
+                _MenuGroup(
+                  items: const [
+                    _MenuItem(Icons.notifications_outlined, 'Notifications', 'Alerts and reminders'),
+                    _MenuItem(Icons.palette_outlined, 'Appearance', 'Theme and display'),
+                    _MenuItem(Icons.language_outlined, 'Language', 'English'),
+                    _MenuItem(Icons.privacy_tip_outlined, 'Privacy', 'Data and permissions'),
+                  ],
+                  onItemTap: (item) => _handleMenuTap(context, item),
+                ),
                 const SizedBox(height: AppConstants.paddingMD),
                 _SectionLabel('Account'),
-                _MenuGroup(items: const [
-                  _MenuItem(Icons.share_outlined, 'Share App', 'Invite friends'),
-                  _MenuItem(Icons.star_outline_rounded, 'Rate Us', 'Leave a review'),
-                  _MenuItem(Icons.logout_rounded, 'Sign Out', '', isDestructive: true),
-                ]),
+                _MenuGroup(
+                  items: const [
+                    _MenuItem(Icons.share_outlined, 'Share App', 'Invite friends'),
+                    _MenuItem(Icons.star_outline_rounded, 'Rate Us', 'Leave a review'),
+                    _MenuItem(Icons.logout_rounded, 'Sign Out', '', isDestructive: true),
+                  ],
+                  onItemTap: (item) => _handleMenuTap(context, item),
+                ),
               ]),
             ),
           ),
@@ -219,7 +279,8 @@ class _MenuItem {
 
 class _MenuGroup extends StatelessWidget {
   final List<_MenuItem> items;
-  const _MenuGroup({required this.items});
+  final Function(String) onItemTap;
+  const _MenuGroup({required this.items, required this.onItemTap});
 
   @override
   Widget build(BuildContext context) {
@@ -244,7 +305,7 @@ class _MenuGroup extends StatelessWidget {
                         ? const Radius.circular(AppConstants.radiusLG)
                         : Radius.zero,
                   ),
-                  onTap: () {},
+                  onTap: () => onItemTap(item.title),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: AppConstants.paddingMD, vertical: 12),
