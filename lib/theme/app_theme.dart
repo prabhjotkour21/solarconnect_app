@@ -133,6 +133,113 @@ abstract class AppTheme {
     );
   }
 
-  // ── Light Theme (optional — can implement later) ──────────────────────────
-  static ThemeData get light => dark; // Use dark as default for now
+  // ── Light Theme ──────────────────────────────────────────────────────────
+  static ThemeData get light {
+    const colorScheme = ColorScheme(
+      brightness: Brightness.light,
+      primary: AppColors.primary,
+      onPrimary: Colors.white,
+      primaryContainer: AppColors.primaryLight,
+      onPrimaryContainer: Colors.white,
+      secondary: AppColors.success,
+      onSecondary: Colors.white,
+      secondaryContainer: Color(0xFFD4F0E3),
+      onSecondaryContainer: AppColors.success,
+      tertiary: AppColors.info,
+      onTertiary: Colors.white,
+      error: AppColors.error,
+      onError: Colors.white,
+      surface: AppColors.surfaceLight,
+      onSurface: AppColors.textPrimaryLight,
+      surfaceContainerHighest: AppColors.cardLight,
+      onSurfaceVariant: AppColors.textSecondaryLight,
+      outline: Color(0xFFCDD5DB),
+    );
+
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: AppColors.backgroundLight,
+
+      textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme).copyWith(
+        displayLarge: GoogleFonts.inter(
+            fontSize: 48, fontWeight: FontWeight.w700, color: AppColors.textPrimaryLight),
+        headlineMedium: GoogleFonts.inter(
+            fontSize: 24, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight),
+        titleLarge: GoogleFonts.inter(
+            fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight),
+        titleMedium: GoogleFonts.inter(
+            fontSize: 16, fontWeight: FontWeight.w500, color: AppColors.textPrimaryLight),
+        bodyLarge: GoogleFonts.inter(
+            fontSize: 16, fontWeight: FontWeight.w400, color: AppColors.textPrimaryLight),
+        bodyMedium: GoogleFonts.inter(
+            fontSize: 14, fontWeight: FontWeight.w400, color: AppColors.textPrimaryLight),
+        bodySmall: GoogleFonts.inter(
+            fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textSecondaryLight),
+        labelLarge: GoogleFonts.inter(
+            fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondaryLight),
+        labelSmall: GoogleFonts.inter(
+            fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textSecondaryLight),
+      ),
+
+      cardTheme: CardThemeData(
+        color: AppColors.cardLight,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFFCDD5DB), width: 1),
+        ),
+        margin: EdgeInsets.zero,
+      ),
+
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.backgroundLight,
+        foregroundColor: AppColors.textPrimaryLight,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+        ),
+      ),
+
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: AppColors.surfaceLight,
+        indicatorColor: AppColors.primary.withValues(alpha: 0.15),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: AppColors.primary, size: 24);
+          }
+          return IconThemeData(color: AppColors.textSecondaryLight, size: 24);
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return GoogleFonts.inter(
+              fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary);
+          }
+          return GoogleFonts.inter(
+              fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textSecondaryLight);
+        }),
+        elevation: 0,
+      ),
+
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          textStyle: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
+        ),
+      ),
+
+      dividerTheme: const DividerThemeData(
+        color: Color(0xFFCDD5DB),
+        thickness: 1,
+        space: 1,
+      ),
+    );
+  }
 }

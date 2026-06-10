@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../main.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../utils/app_constants.dart';
-import '../../utils/app_state_manager.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -12,142 +12,131 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  late final AppStateManager _stateManager;
   bool _notificationsEnabled = true;
-  late String _selectedLanguage;
+  bool _dailySummaryEnabled = true;
 
-  @override
-  void initState() {
-    super.initState();
-    _stateManager = AppStateManager();
-    _selectedLanguage = _stateManager.selectedLanguage;
-  }
+  bool get _isDarkMode => appThemeMode.value == ThemeMode.dark;
+  String get _selectedLanguage => appLanguage.value;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
-      appBar: AppBar(
-        backgroundColor: AppColors.surfaceDark,
-        elevation: 0,
-        title: Text(
-          'Settings',
-          style: AppTextStyles.headingLarge,
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: appThemeMode,
+      builder: (_, __, ___) => ValueListenableBuilder<String>(
+        valueListenable: appLanguage,
+        builder: (_, ___, ____) => Scaffold(
+          backgroundColor: AppColors.backgroundDark,
+          appBar: AppBar(
+            backgroundColor: AppColors.surfaceDark,
+            elevation: 0,
+            title: Text('Settings', style: AppTextStyles.headingLarge),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          body: ListView(
+            children: [
+              _SectionHeader('Notifications'),
+              _SettingTile(
+                icon: Icons.notifications,
+                title: 'Push Notifications',
+                subtitle: 'Receive alerts for energy insights',
+                trailing: Switch(
+                  value: _notificationsEnabled,
+                  onChanged: (v) => setState(() => _notificationsEnabled = v),
+                  activeColor: AppColors.primary,
+                ),
+              ),
+              _SettingTile(
+                icon: Icons.schedule,
+                title: 'Daily Summary',
+                subtitle: 'Get daily energy report at 6 PM',
+                trailing: Switch(
+                  value: _dailySummaryEnabled,
+                  onChanged: (v) => setState(() => _dailySummaryEnabled = v),
+                  activeColor: AppColors.primary,
+                ),
+              ),
+
+              _SectionHeader('Display'),
+              _SettingTile(
+                icon: Icons.dark_mode,
+                title: 'Dark Mode',
+                subtitle: _isDarkMode ? 'Currently: Dark' : 'Currently: Light',
+                trailing: Switch(
+                  value: _isDarkMode,
+                  onChanged: (v) {
+                    appThemeMode.value = v ? ThemeMode.dark : ThemeMode.light;
+                    setState(() {});
+                  },
+                  activeColor: AppColors.primary,
+                ),
+              ),
+
+              _SectionHeader('Language'),
+              _LanguageTile(
+                selectedLanguage: _selectedLanguage,
+                onChanged: (lang) {
+                  appLanguage.value = lang;
+                  setState(() {});
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Language changed to $lang'),
+                      backgroundColor: AppColors.success,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+              ),
+
+              _SectionHeader('Data & Storage'),
+              _SettingTile(
+                icon: Icons.storage,
+                title: 'Cache Size',
+                subtitle: '245 MB',
+                onTap: _showClearCacheDialog,
+              ),
+              _SettingTile(
+                icon: Icons.download,
+                title: 'Export Data',
+                subtitle: 'Download your energy data as CSV',
+                onTap: _showExportDialog,
+              ),
+
+              _SectionHeader('Privacy & Security'),
+              _SettingTile(
+                icon: Icons.privacy_tip,
+                title: 'Privacy Policy',
+                onTap: _showPrivacyDialog,
+              ),
+              _SettingTile(
+                icon: Icons.description,
+                title: 'Terms of Service',
+                onTap: _showTermsDialog,
+              ),
+              _SettingTile(
+                icon: Icons.lock,
+                title: 'Change Password',
+                onTap: _showPasswordDialog,
+              ),
+
+              _SectionHeader('About'),
+              const _SettingTile(
+                icon: Icons.info,
+                title: 'App Version',
+                subtitle: 'SolarConnect v1.0.0',
+              ),
+              const _SettingTile(
+                icon: Icons.code,
+                title: 'Build Number',
+                subtitle: '2026.06.10.001',
+              ),
+
+              const SizedBox(height: AppConstants.paddingXL),
+            ],
+          ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: ListView(
-        children: [
-          // Notifications Section
-          _SectionHeader('Notifications'),
-          _SettingTile(
-            icon: Icons.notifications,
-            title: 'Push Notifications',
-            subtitle: 'Receive alerts for energy insights',
-            trailing: Switch(
-              value: _notificationsEnabled,
-              onChanged: (value) {
-                setState(() => _notificationsEnabled = value);
-              },
-              activeColor: AppColors.primary,
-            ),
-          ),
-          _SettingTile(
-            icon: Icons.schedule,
-            title: 'Daily Summary',
-            subtitle: 'Get daily energy report at 6 PM',
-            trailing: Switch(
-              value: true,
-              onChanged: (_) {},
-              activeColor: AppColors.primary,
-            ),
-          ),
-
-          // Display Section
-          _SectionHeader('Display'),
-          _SettingTile(
-            icon: Icons.dark_mode,
-            title: 'Dark Mode',
-            subtitle: 'Theme: Dark',
-            trailing: Switch(
-              value: _stateManager.isDarkMode,
-              onChanged: (value) async {
-                await _stateManager.setTheme(value);
-                setState(() {});
-              },
-              activeColor: AppColors.primary,
-            ),
-          ),
-
-          // Language Section
-          _SectionHeader('Language'),
-          _LanguageTile(
-            selectedLanguage: _selectedLanguage,
-            onChanged: (language) async {
-              await _stateManager.setLanguage(language);
-              setState(() => _selectedLanguage = language);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('✅ Language changed to $language'),
-                    backgroundColor: AppColors.success,
-                  ),
-                );
-              }
-            },
-          ),
-
-          // Data Section
-          _SectionHeader('Data & Storage'),
-          _SettingTile(
-            icon: Icons.storage,
-            title: 'Cache Size',
-            subtitle: '245 MB',
-            onTap: () => _showClearCacheDialog(),
-          ),
-          _SettingTile(
-            icon: Icons.download,
-            title: 'Export Data',
-            subtitle: 'Download your energy data as CSV',
-            onTap: () => _showExportDialog(),
-          ),
-
-          // Privacy Section
-          _SectionHeader('Privacy & Security'),
-          _SettingTile(
-            icon: Icons.privacy_tip,
-            title: 'Privacy Policy',
-            onTap: () => _showPrivacyDialog(),
-          ),
-          _SettingTile(
-            icon: Icons.description,
-            title: 'Terms of Service',
-            onTap: () => _showTermsDialog(),
-          ),
-          _SettingTile(
-            icon: Icons.lock,
-            title: 'Change Password',
-            onTap: () => _showPasswordDialog(),
-          ),
-
-          // About Section
-          _SectionHeader('About'),
-          _SettingTile(
-            icon: Icons.info,
-            title: 'App Version',
-            subtitle: 'SolarConnect v1.0.0',
-          ),
-          _SettingTile(
-            icon: Icons.code,
-            title: 'Build Number',
-            subtitle: '2026.06.10.001',
-          ),
-
-          const SizedBox(height: AppConstants.paddingXL),
-        ],
       ),
     );
   }
@@ -155,7 +144,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showClearCacheDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardDark,
         title: Text('Clear Cache?', style: AppTextStyles.headingMedium),
         content: Text(
@@ -164,18 +153,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('✅ Cache cleared successfully'),
-                  backgroundColor: Color(0xFF4CAF82),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              // Show progress
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const AlertDialog(
+                  backgroundColor: AppColors.cardDark,
+                  content: Row(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(width: 16),
+                      Text('Clearing cache...'),
+                    ],
+                  ),
                 ),
               );
+              await Future.delayed(const Duration(seconds: 1));
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('✅ Cache cleared — 245 MB freed'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              }
             },
             style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
             child: const Text('Clear'),
@@ -188,27 +196,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showExportDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardDark,
         title: Text('Export Data', style: AppTextStyles.headingMedium),
-        content: Text(
-          'Export your energy data for the last 12 months as CSV file?',
-          style: AppTextStyles.bodyMedium,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This will export your energy data for the last 12 months as a CSV file.',
+              style: AppTextStyles.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceDark,
+                borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.insert_drive_file, color: AppColors.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Text('SolarConnect_Energy_2026.csv',
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary)),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('✅ Data exported: SolarConnect_2026.csv'),
-                  backgroundColor: Color(0xFF4CAF82),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              // Show export progress dialog
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => AlertDialog(
+                  backgroundColor: AppColors.cardDark,
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const LinearProgressIndicator(
+                        color: AppColors.primary,
+                        backgroundColor: AppColors.surfaceDark,
+                      ),
+                      const SizedBox(height: 16),
+                      Text('Exporting data...', style: AppTextStyles.bodyMedium),
+                    ],
+                  ),
                 ),
               );
+              await Future.delayed(const Duration(seconds: 2));
+              if (mounted) {
+                Navigator.pop(context); // close progress
+                _showExportSuccessDialog();
+              }
             },
             style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
             child: const Text('Export'),
@@ -218,10 +266,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _showExportSuccessDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardDark,
+        title: Row(
+          children: [
+            const Icon(Icons.check_circle, color: AppColors.success),
+            const SizedBox(width: 8),
+            Text('Export Complete', style: AppTextStyles.headingMedium),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Your data has been exported successfully.',
+                style: AppTextStyles.bodyMedium),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.success.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+                border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('📄 SolarConnect_Energy_2026.csv',
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.success)),
+                  const SizedBox(height: 4),
+                  Text('Size: 1.2 MB  •  365 records',
+                      style: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary)),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showPrivacyDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardDark,
         title: Text('Privacy Policy', style: AppTextStyles.headingMedium),
         content: SingleChildScrollView(
@@ -235,7 +333,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         actions: [
           FilledButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx),
             style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
             child: const Text('Understood'),
           ),
@@ -247,23 +345,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showTermsDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardDark,
         title: Text('Terms of Service', style: AppTextStyles.headingMedium),
         content: SingleChildScrollView(
           child: Text(
-            'By using SolarConnect, you agree:\n\n'
+            'By using SolarConnect, you agree to these terms:\n\n'
             '• You own all data you generate\n'
-            '• Service provided as-is\n'
-            '• You maintain system responsibility\n'
-            '• Terms may be updated anytime\n\n'
+            '• We provide the service as-is\n'
+            '• You are responsible for system maintenance\n'
+            '• We reserve the right to update these terms\n\n'
             'Last updated: June 2026',
             style: AppTextStyles.bodyMedium,
           ),
         ),
         actions: [
           FilledButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx),
             style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
             child: const Text('Accept'),
           ),
@@ -275,7 +373,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showPasswordDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardDark,
         title: Text('Change Password', style: AppTextStyles.headingMedium),
         content: Column(
@@ -316,16 +414,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
           FilledButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('✅ Password updated'),
-                  backgroundColor: Color(0xFF4CAF82),
+                  content: Text('✅ Password updated successfully'),
+                  backgroundColor: AppColors.success,
                 ),
               );
             },
@@ -338,334 +436,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
-      appBar: AppBar(
-        backgroundColor: AppColors.surfaceDark,
-        elevation: 0,
-        title: Text(
-          'Settings',
-          style: AppTextStyles.headingLarge,
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: ListView(
-        children: [
-          // Notifications Section
-          _SectionHeader('Notifications'),
-          _SettingTile(
-            icon: Icons.notifications,
-            title: 'Push Notifications',
-            subtitle: 'Receive alerts for energy insights',
-            trailing: Switch(
-              value: _notificationsEnabled,
-              onChanged: (value) {
-                setState(() => _notificationsEnabled = value);
-              },
-              activeColor: AppColors.primary,
-            ),
-          ),
-          _SettingTile(
-            icon: Icons.schedule,
-            title: 'Daily Summary',
-            subtitle: 'Get daily energy report at 6 PM',
-            trailing: Switch(
-              value: true,
-              onChanged: (_) {},
-              activeColor: AppColors.primary,
-            ),
-          ),
-
-          // Display Section
-          _SectionHeader('Display'),
-          _SettingTile(
-            icon: Icons.dark_mode,
-            title: 'Dark Mode',
-            subtitle: 'Currently enabled',
-            trailing: Switch(
-              value: _darkModeEnabled,
-              onChanged: (value) {
-                setState(() => _darkModeEnabled = value);
-              },
-              activeColor: AppColors.primary,
-            ),
-          ),
-
-          // Language Section
-          _SectionHeader('Language'),
-          _LanguageTile(
-            selectedLanguage: _selectedLanguage,
-            onChanged: (language) {
-              setState(() => _selectedLanguage = language);
-            },
-          ),
-
-          // Data Section
-          _SectionHeader('Data & Storage'),
-          _SettingTile(
-            icon: Icons.storage,
-            title: 'Cache Size',
-            subtitle: '245 MB',
-            onTap: () => _showClearCacheDialog(),
-          ),
-          _SettingTile(
-            icon: Icons.download,
-            title: 'Export Data',
-            subtitle: 'Download your energy data as CSV',
-            onTap: () => _showExportDialog(),
-          ),
-
-          // Privacy Section
-          _SectionHeader('Privacy & Security'),
-          _SettingTile(
-            icon: Icons.privacy_tip,
-            title: 'Privacy Policy',
-            onTap: () => _showPrivacyDialog(),
-          ),
-          _SettingTile(
-            icon: Icons.description,
-            title: 'Terms of Service',
-            onTap: () => _showTermsDialog(),
-          ),
-          _SettingTile(
-            icon: Icons.lock,
-            title: 'Change Password',
-            onTap: () => _showPasswordDialog(),
-          ),
-
-          // About Section
-          _SectionHeader('About'),
-          _SettingTile(
-            icon: Icons.info,
-            title: 'App Version',
-            subtitle: 'SolarConnect v1.0.0',
-          ),
-          _SettingTile(
-            icon: Icons.code,
-            title: 'Build Number',
-            subtitle: '2026.06.10.001',
-          ),
-
-          const SizedBox(height: AppConstants.paddingXL),
-        ],
-      ),
-    );
-  }
-
-  void _showClearCacheDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardDark,
-        title: Text(
-          'Clear Cache?',
-          style: AppTextStyles.headingMedium,
-        ),
-        content: Text(
-          'This will clear temporary data and free up 245 MB of space.',
-          style: AppTextStyles.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Cache cleared successfully')),
-              );
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primaryOrange,
-            ),
-            child: const Text('Clear'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showExportDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardDark,
-        title: Text(
-          'Export Data',
-          style: AppTextStyles.headingMedium,
-        ),
-        content: Text(
-          'Export your energy data for the last 12 months?',
-          style: AppTextStyles.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Data exported to Downloads')),
-              );
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primaryOrange,
-            ),
-            child: const Text('Export'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPrivacyDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardDark,
-        title: Text(
-          'Privacy Policy',
-          style: AppTextStyles.headingMedium,
-        ),
-        content: SingleChildScrollView(
-          child: Text(
-            'SolarConnect is committed to protecting your privacy. '
-            'We collect minimal data necessary to provide our services. '
-            'Your energy data is encrypted and never shared with third parties.\n\n'
-            'Last updated: June 2026',
-            style: AppTextStyles.bodyMedium,
-          ),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(context),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primaryOrange,
-            ),
-            child: const Text('Understood'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showTermsDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardDark,
-        title: Text(
-          'Terms of Service',
-          style: AppTextStyles.headingMedium,
-        ),
-        content: SingleChildScrollView(
-          child: Text(
-            'By using SolarConnect, you agree to these terms:\n\n'
-            '• You own all data you generate\n'
-            '• We provide the service as-is\n'
-            '• You are responsible for system maintenance\n'
-            '• We reserve the right to update these terms\n\n'
-            'Last updated: June 2026',
-            style: AppTextStyles.bodyMedium,
-          ),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(context),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primaryOrange,
-            ),
-            child: const Text('Accept'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPasswordDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardDark,
-        title: Text(
-          'Change Password',
-          style: AppTextStyles.headingMedium,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              obscureText: true,
-              style: const TextStyle(color: AppColors.primaryText),
-              decoration: InputDecoration(
-                hintText: 'Current Password',
-                hintStyle: const TextStyle(color: AppColors.secondaryText),
-                border: OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppConstants.radiusMD),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: AppColors.dividerColor),
-                  borderRadius:
-                      BorderRadius.circular(AppConstants.radiusMD),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppConstants.paddingMD),
-            TextField(
-              obscureText: true,
-              style: const TextStyle(color: AppColors.primaryText),
-              decoration: InputDecoration(
-                hintText: 'New Password',
-                hintStyle: const TextStyle(color: AppColors.secondaryText),
-                border: OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppConstants.radiusMD),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: AppColors.dividerColor),
-                  borderRadius:
-                      BorderRadius.circular(AppConstants.radiusMD),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Password updated')),
-              );
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primaryOrange,
-            ),
-            child: const Text('Update'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _SectionHeader extends StatelessWidget {
   final String title;
-
   const _SectionHeader(this.title);
 
   @override
@@ -679,9 +451,7 @@ class _SectionHeader extends StatelessWidget {
       ),
       child: Text(
         title,
-        style: AppTextStyles.labelLarge.copyWith(
-          color: AppColors.textSecondary,
-        ),
+        style: AppTextStyles.labelLarge.copyWith(color: AppColors.textSecondary),
       ),
     );
   }
@@ -704,25 +474,28 @@ class _SettingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.primaryOrange),
-      title: Text(title, style: AppTextStyles.bodyLarge),
-      subtitle: subtitle != null
-          ? Text(subtitle!, style: AppTextStyles.bodySmall)
-          : null,
-      trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right) : null),
-      onTap: onTap,
-      tileColor: AppColors.cardDark,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.paddingLG,
-        vertical: 8,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-      ),
-      margin: const EdgeInsets.symmetric(
+    return Padding(
+      padding: const EdgeInsets.symmetric(
         horizontal: AppConstants.paddingLG,
         vertical: 4,
+      ),
+      child: ListTile(
+        leading: Icon(icon, color: AppColors.primary),
+        title: Text(title, style: AppTextStyles.bodyLarge),
+        subtitle: subtitle != null
+            ? Text(subtitle!, style: AppTextStyles.bodySmall)
+            : null,
+        trailing: trailing ??
+            (onTap != null ? const Icon(Icons.chevron_right) : null),
+        onTap: onTap,
+        tileColor: AppColors.cardDark,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.paddingLG,
+          vertical: 8,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        ),
       ),
     );
   }
@@ -739,23 +512,25 @@ class _LanguageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.language, color: AppColors.primaryOrange),
-      title: Text('Language', style: AppTextStyles.bodyLarge),
-      subtitle: Text(selectedLanguage, style: AppTextStyles.bodySmall),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () => _showLanguageDialog(context),
-      tileColor: AppColors.cardDark,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.paddingLG,
-        vertical: 8,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-      ),
-      margin: const EdgeInsets.symmetric(
+    return Padding(
+      padding: const EdgeInsets.symmetric(
         horizontal: AppConstants.paddingLG,
         vertical: 4,
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.language, color: AppColors.primary),
+        title: Text('Language', style: AppTextStyles.bodyLarge),
+        subtitle: Text(selectedLanguage, style: AppTextStyles.bodySmall),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => _showLanguageDialog(context),
+        tileColor: AppColors.cardDark,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.paddingLG,
+          vertical: 8,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        ),
       ),
     );
   }
@@ -763,23 +538,20 @@ class _LanguageTile extends StatelessWidget {
   void _showLanguageDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardDark,
-        title: Text(
-          'Select Language',
-          style: AppTextStyles.headingMedium,
-        ),
+        title: Text('Select Language', style: AppTextStyles.headingMedium),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: ['English', 'Spanish', 'French', 'German', 'Hindi']
               .map((lang) => ListTile(
                     title: Text(lang, style: AppTextStyles.bodyLarge),
-                    leading: Radio(
+                    leading: Radio<String>(
                       value: lang,
                       groupValue: selectedLanguage,
                       onChanged: (value) {
                         onChanged(value!);
-                        Navigator.pop(context);
+                        Navigator.pop(ctx);
                       },
                       activeColor: AppColors.primary,
                     ),

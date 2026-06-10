@@ -22,7 +22,7 @@ class ArticleCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppConstants.radiusLG),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppConstants.radiusLG),
-          onTap: () {},
+          onTap: null,
           child: Padding(
             padding: const EdgeInsets.all(AppConstants.paddingMD),
             child: Row(
