@@ -1,0 +1,28 @@
+/// App-wide constants.
+///
+/// Rule: if a value appears more than once, it belongs here.
+abstract class AppConstants {
+  // ── App identity ───────────────────────────────────────────────────────────
+  static const String appName = 'SolarConnect';
+  static const String appVersion = '1.0.0';
+
+  // ── Animation durations ────────────────────────────────────────────────────
+  static const Duration animFast = Duration(milliseconds: 200);
+  static const Duration animNormal = Duration(milliseconds: 350);
+  static const Duration animSlow = Duration(milliseconds: 600);
+
+  // ── Layout ────────────────────────────────────────────────────────────────
+  static const double paddingXS = 4.0;
+  static const double paddingSM = 8.0;
+  static const double paddingMD = 16.0;
+  static const double paddingLG = 24.0;
+  static const double paddingXL = 32.0;
+
+  static const double radiusSM = 8.0;
+  static const double radiusMD = 12.0;
+  static const double radiusLG = 16.0;
+  static const double radiusXL = 24.0;
+
+  // ── Demo / mock data refresh interval ────────────────────────────────────
+  static const Duration mockRefreshInterval = Duration(seconds: 5);
+}
