@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
 import 'theme/app_theme.dart';
+import 'screens/splash_screen.dart';
 import 'screens/shell/shell_screen.dart';
+import 'screens/trends_screen.dart';
+import 'screens/insights_screen.dart';
+import 'screens/power_cut_screen.dart';
+import 'screens/savings_screen.dart';
+import 'screens/notifications_screen.dart';
+import 'screens/inverter_setup_screen.dart';
+import 'screens/wifi_config_screen.dart';
 
 // Global notifiers — settings screen writes to these, app rebuilds
 final ValueNotifier<ThemeMode> appThemeMode = ValueNotifier(ThemeMode.dark);
@@ -23,7 +31,17 @@ class SolarConnectApp extends StatelessWidget {
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
         themeMode: mode,
-        home: const ShellScreen(),
+        home: const SplashScreen(),
+        routes: {
+          '/home': (context) => const ShellScreen(),
+          '/trends': (context) => const TrendsScreen(),
+          '/insights': (context) => const InsightsScreen(),
+          '/power_cut': (context) => const PowerCutScreen(),
+          '/savings': (context) => const SavingsScreen(),
+          '/notifications': (context) => const NotificationsScreen(),
+          '/inverter_setup': (context) => const InverterSetupScreen(),
+          '/wifi_config': (context) => const WifiConfigScreen(),
+        },
       ),
     );
   }
