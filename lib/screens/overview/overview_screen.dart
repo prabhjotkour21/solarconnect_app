@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../models/energy_reading.dart';
+import '../../models/environmental_data.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../utils/app_constants.dart';
 import '../../widgets/overview/energy_flow_section.dart';
 import '../../widgets/overview/energy_stats_section.dart';
 import '../../widgets/overview/battery_card.dart';
+import '../../widgets/overview/environmental_benefits_card.dart';
 
 class OverviewScreen extends StatefulWidget {
   const OverviewScreen({super.key});
@@ -97,6 +99,13 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 EnergyStatsSection(reading: _reading),
                 const SizedBox(height: AppConstants.paddingMD),
                 BatteryCard(reading: _reading),
+                const SizedBox(height: AppConstants.paddingMD),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMD),
+                  child: EnvironmentalBenefitsCard(
+                    data: EnvironmentalData.fromGeneration(_reading.solarTodayKwh),
+                  ),
+                ),
                 const SizedBox(height: AppConstants.paddingMD),
                 _AccumulatedCard(reading: _reading),
               ]),

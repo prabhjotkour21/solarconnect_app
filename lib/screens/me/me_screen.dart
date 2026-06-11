@@ -6,6 +6,13 @@ import '../../utils/app_constants.dart';
 import '../../utils/app_dialogs.dart';
 import 'settings_screen.dart';
 import 'help_screen.dart';
+import '../trends_screen.dart';
+import '../insights_screen.dart';
+import '../power_cut_screen.dart';
+import '../savings_screen.dart';
+import '../notifications_screen.dart';
+import '../inverter_setup_screen.dart';
+import '../wifi_config_screen.dart';
 
 class MeScreen extends StatelessWidget {
   const MeScreen({super.key});
@@ -19,11 +26,38 @@ class MeScreen extends StatelessWidget {
             MaterialPageRoute(builder: (_) => const HelpScreen()));
         break;
       case 'Notifications':
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+        break;
       case 'Appearance':
       case 'Language':
       case 'Privacy':
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => const SettingsScreen()));
+        break;
+      case 'Trends':
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const TrendsScreen()));
+        break;
+      case 'Insights':
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const InsightsScreen()));
+        break;
+      case 'Power Cut':
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const PowerCutScreen()));
+        break;
+      case 'Savings':
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const SavingsScreen()));
+        break;
+      case 'Setup Inverter':
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const InverterSetupScreen()));
+        break;
+      case 'Wi-Fi Configuration':
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const WifiConfigScreen()));
         break;
       case 'Share App':
         AppDialogs.showShareDialog(context);
@@ -75,9 +109,37 @@ class MeScreen extends StatelessWidget {
                       const SizedBox(height: AppConstants.paddingMD),
                       const _SystemInfoCard(),
                       const SizedBox(height: AppConstants.paddingMD),
+                      const _SectionLabel('Analytics & Monitoring'),
+                      _MenuGroup(
+                        items: const [
+                          _MenuItem(Icons.trending_up_rounded, 'Trends',
+                              'View historical data'),
+                          _MenuItem(Icons.insights_rounded, 'Insights',
+                              'Performance analysis'),
+                          _MenuItem(Icons.power_off_rounded, 'Power Cut',
+                              'Power outage tracking'),
+                          _MenuItem(Icons.savings_rounded, 'Savings',
+                              'Financial returns'),
+                        ],
+                        onItemTap: (item) => _handleMenuTap(context, item),
+                      ),
+                      const SizedBox(height: AppConstants.paddingMD),
+                      const _SectionLabel('System Setup'),
+                      _MenuGroup(
+                        items: const [
+                          _MenuItem(Icons.router_rounded, 'Setup Inverter',
+                              'Configure your inverter'),
+                          _MenuItem(Icons.wifi_rounded, 'Wi-Fi Configuration',
+                              'Connect to network'),
+                        ],
+                        onItemTap: (item) => _handleMenuTap(context, item),
+                      ),
+                      const SizedBox(height: AppConstants.paddingMD),
                       const _SectionLabel('Help & Support'),
                       _MenuGroup(
                         items: const [
+                          _MenuItem(Icons.notifications_outline_rounded, 'Notifications',
+                              'View all alerts'),
                           _MenuItem(Icons.help_outline_rounded, 'FAQ',
                               'Common questions answered'),
                           _MenuItem(Icons.chat_bubble_outline_rounded,
@@ -91,8 +153,6 @@ class MeScreen extends StatelessWidget {
                       const _SectionLabel('Settings'),
                       _MenuGroup(
                         items: [
-                          const _MenuItem(Icons.notifications_outlined,
-                              'Notifications', 'Alerts and reminders'),
                           const _MenuItem(Icons.palette_outlined, 'Appearance',
                               'Theme and display'),
                           // Language subtitle is dynamic
