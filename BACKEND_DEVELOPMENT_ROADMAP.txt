@@ -1,0 +1,923 @@
+===============================================================================
+SOLARCONNECT APP - BACKEND DEVELOPMENT ROADMAP
+===============================================================================
+Date: June 11, 2026
+Status: Backend Architecture Planning Document
+
+===============================================================================
+1. TECH STACK RECOMMENDATIONS
+===============================================================================
+
+PRIMARY STACK (RECOMMENDED):
+├─ Runtime: Node.js (v18+) or Python (3.10+)
+├─ Framework: Express.js (Node) OR FastAPI/Django (Python)
+├─ Database: PostgreSQL (primary) + Redis (caching)
+├─ Authentication: JWT + OAuth2 (optional: Firebase Auth)
+├─ Cloud: AWS/Google Cloud/Azure
+├─ APIs: REST or GraphQL
+└─ Real-time: WebSockets or Socket.io (for live updates)
+
+ALTERNATIVE STACK:
+├─ Runtime: Java/Spring Boot
+├─ Database: MongoDB + PostgreSQL
+├─ Cloud: Heroku or Railway
+└─ APIs: REST + gRPC
+
+RECOMMENDED CHOICE: Node.js + Express + PostgreSQL
+(Fastest to develop, excellent tooling, JavaScript/TypeScript support)
+
+===============================================================================
+2. DATABASE SCHEMA DESIGN
+===============================================================================
+
+CORE TABLES:
+
+A) USERS TABLE
+─────────────────────────────────────────────────────────────────────────────
+Columns:
+- user_id (UUID, Primary Key)
+- email (VARCHAR, UNIQUE, NOT NULL)
+- phone (VARCHAR, UNIQUE)
+- password_hash (VARCHAR, NOT NULL)
+- full_name (VARCHAR)
+- profile_picture_url (VARCHAR)
+- location (VARCHAR)
+- timezone (VARCHAR, default: UTC)
+- language (VARCHAR, default: English)
+- theme_preference (ENUM: dark/light)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+- last_login (TIMESTAMP)
+- is_active (BOOLEAN)
+- verification_status (ENUM: pending/verified)
+
+B) INVERTERS TABLE
+─────────────────────────────────────────────────────────────────────────────
+Columns:
+- inverter_id (UUID, Primary Key)
+- user_id (UUID, Foreign Key → users.user_id)
+- serial_number (VARCHAR, UNIQUE, NOT NULL)
+- model_name (VARCHAR)
+- manufacturer (VARCHAR)
+- firmware_version (VARCHAR)
+- capacity_kva (DECIMAL)
+- installation_date (DATE)
+- warranty_expiry (DATE)
+- ip_address (VARCHAR)
+- mac_address (VARCHAR)
+- is_paired (BOOLEAN)
+- pairing_date (TIMESTAMP)
+- last_sync (TIMESTAMP)
+- status (ENUM: online/offline/error)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
+C) ENERGY_READINGS TABLE
+─────────────────────────────────────────────────────────────────────────────
+Columns:
+- reading_id (UUID, Primary Key)
+- inverter_id (UUID, Foreign Key → inverters.inverter_id)
+- timestamp (TIMESTAMP, NOT NULL, INDEXED)
+- solar_power_w (DECIMAL)
+- grid_power_w (DECIMAL)
+- load_power_w (DECIMAL)
+- battery_power_w (DECIMAL)
+- battery_charge_percent (DECIMAL)
+- solar_today_kwh (DECIMAL)
+- grid_import_kwh (DECIMAL)
+- grid_export_kwh (DECIMAL)
+- battery_health_percent (DECIMAL)
+- temperature_c (DECIMAL)
+- humidity_percent (DECIMAL)
+- signal_strength (INTEGER)
+- created_at (TIMESTAMP)
+
+D) DAILY_SUMMARY TABLE (Aggregated data)
+─────────────────────────────────────────────────────────────────────────────
+Columns:
+- summary_id (UUID, Primary Key)
+- inverter_id (UUID, Foreign Key)
+- date (DATE)
+- total_solar_kwh (DECIMAL)
+- total_grid_import_kwh (DECIMAL)
+- total_grid_export_kwh (DECIMAL)
+- avg_battery_percent (DECIMAL)
+- max_power_w (DECIMAL)
+- avg_power_w (DECIMAL)
+- self_consumption_percent (DECIMAL)
+- peak_time (TIME)
+- reading_count (INTEGER)
+- created_at (TIMESTAMP)
+
+E) MONTHLY_SUMMARY TABLE (Aggregated data)
+─────────────────────────────────────────────────────────────────────────────
+Columns:
+- summary_id (UUID, Primary Key)
+- inverter_id (UUID, Foreign Key)
+- year (INTEGER)
+- month (INTEGER)
+- total_solar_kwh (DECIMAL)
+- total_grid_import_kwh (DECIMAL)
+- total_grid_export_kwh (DECIMAL)
+- days_with_data (INTEGER)
+- created_at (TIMESTAMP)
+
+F) POWER_CUT_EVENTS TABLE
+─────────────────────────────────────────────────────────────────────────────
+Columns:
+- event_id (UUID, Primary Key)
+- inverter_id (UUID, Foreign Key)
+- start_time (TIMESTAMP)
+- end_time (TIMESTAMP)
+- duration_minutes (INTEGER)
+- severity (ENUM: low/medium/high)
+- notes (TEXT)
+- created_at (TIMESTAMP)
+
+G) NOTIFICATIONS TABLE
+─────────────────────────────────────────────────────────────────────────────
+Columns:
+- notification_id (UUID, Primary Key)
+- user_id (UUID, Foreign Key)
+- inverter_id (UUID, Foreign Key)
+- title (VARCHAR)
+- description (TEXT)
+- type (ENUM: alert/info/update/saving)
+- priority (ENUM: low/medium/high/critical)
+- is_read (BOOLEAN)
+- action_url (VARCHAR)
+- created_at (TIMESTAMP)
+- read_at (TIMESTAMP)
+
+H) ENVIRONMENTAL_DATA TABLE
+─────────────────────────────────────────────────────────────────────────────
+Columns:
+- env_id (UUID, Primary Key)
+- inverter_id (UUID, Foreign Key)
+- date (DATE)
+- co2_saved_kg (DECIMAL)
+- trees_equivalent (DECIMAL)
+- fuel_saved_liters (DECIMAL)
+- water_saved_liters (DECIMAL)
+- created_at (TIMESTAMP)
+
+I) FINANCIAL_DATA TABLE
+─────────────────────────────────────────────────────────────────────────────
+Columns:
+- financial_id (UUID, Primary Key)
+- inverter_id (UUID, Foreign Key)
+- date (DATE)
+- savings_amount (DECIMAL)
+- revenue_from_export (DECIMAL)
+- subsidy_claimed (DECIMAL)
+- total_kwh_saved_cost (DECIMAL)
+- created_at (TIMESTAMP)
+
+J) SETTINGS TABLE
+─────────────────────────────────────────────────────────────────────────────
+Columns:
+- setting_id (UUID, Primary Key)
+- user_id (UUID, Foreign Key)
+- inverter_id (UUID, Foreign Key)
+- electricity_rate_per_kwh (DECIMAL)
+- currency (VARCHAR)
+- notifications_enabled (BOOLEAN)
+- daily_summary_time (TIME)
+- alert_threshold_percent (INTEGER)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
+INDEXES:
+- users(email) - UNIQUE
+- inverters(user_id) - for user queries
+- inverters(serial_number) - UNIQUE
+- energy_readings(inverter_id, timestamp DESC) - COMPOSITE, for time-series queries
+- daily_summary(inverter_id, date) - COMPOSITE
+- power_cut_events(inverter_id, start_time) - COMPOSITE
+- notifications(user_id, is_read, created_at) - COMPOSITE
+
+===============================================================================
+3. API ENDPOINTS NEEDED (REST Architecture)
+===============================================================================
+
+BASE URL: https://api.solarconnect.com/v1
+
+─── AUTHENTICATION ENDPOINTS ───────────────────────────────────────────────
+
+POST /auth/register
+  Request:
+  {
+    "email": "user@example.com",
+    "password": "secure_password",
+    "full_name": "John Doe",
+    "phone": "+91-9876543210"
+  }
+  Response: { user_id, token, refresh_token }
+  Status: 201 Created / 400 Bad Request
+
+POST /auth/login
+  Request: { "email", "password" }
+  Response: { user_id, token, refresh_token, expires_in }
+  Status: 200 OK / 401 Unauthorized
+
+POST /auth/logout
+  Headers: Authorization: Bearer {token}
+  Response: { message: "Logged out successfully" }
+  Status: 200 OK
+
+POST /auth/refresh-token
+  Request: { "refresh_token" }
+  Response: { token, refresh_token }
+  Status: 200 OK / 401 Unauthorized
+
+POST /auth/forgot-password
+  Request: { "email" }
+  Response: { message: "Reset link sent" }
+  Status: 200 OK
+
+POST /auth/reset-password
+  Request: { "token", "new_password" }
+  Response: { message: "Password reset successfully" }
+  Status: 200 OK
+
+POST /auth/verify-email
+  Request: { "verification_code" }
+  Response: { message: "Email verified" }
+  Status: 200 OK
+
+─── USER PROFILE ENDPOINTS ─────────────────────────────────────────────────
+
+GET /users/profile
+  Headers: Authorization: Bearer {token}
+  Response: { user_id, email, full_name, phone, location, ... }
+  Status: 200 OK
+
+PUT /users/profile
+  Headers: Authorization: Bearer {token}
+  Request: { "full_name", "phone", "location", "timezone", "language" }
+  Response: { user_id, updated_fields }
+  Status: 200 OK
+
+PUT /users/preferences
+  Headers: Authorization: Bearer {token}
+  Request: { "theme_preference", "notifications_enabled", "language" }
+  Response: { updated_preferences }
+  Status: 200 OK
+
+PUT /users/password
+  Headers: Authorization: Bearer {token}
+  Request: { "old_password", "new_password" }
+  Response: { message: "Password updated" }
+  Status: 200 OK
+
+DELETE /users/account
+  Headers: Authorization: Bearer {token}
+  Request: { "password" }
+  Response: { message: "Account deleted" }
+  Status: 200 OK
+
+─── INVERTER MANAGEMENT ENDPOINTS ──────────────────────────────────────────
+
+GET /inverters
+  Headers: Authorization: Bearer {token}
+  Query: ?page=1&limit=10
+  Response: { inverters: [...], total, page }
+  Status: 200 OK
+
+POST /inverters/pair
+  Headers: Authorization: Bearer {token}
+  Request: { "serial_number", "model_name", "location" }
+  Response: { inverter_id, pairing_token, setup_instructions }
+  Status: 201 Created / 400 Bad Request
+
+GET /inverters/:inverter_id
+  Headers: Authorization: Bearer {token}
+  Response: { inverter_id, serial_number, model_name, status, ... }
+  Status: 200 OK / 404 Not Found
+
+PUT /inverters/:inverter_id
+  Headers: Authorization: Bearer {token}
+  Request: { "location", "nickname", "settings" }
+  Response: { updated_inverter }
+  Status: 200 OK
+
+DELETE /inverters/:inverter_id
+  Headers: Authorization: Bearer {token}
+  Response: { message: "Inverter removed" }
+  Status: 200 OK
+
+POST /inverters/:inverter_id/unpair
+  Headers: Authorization: Bearer {token}
+  Response: { message: "Inverter unpaired" }
+  Status: 200 OK
+
+GET /inverters/:inverter_id/status
+  Headers: Authorization: Bearer {token}
+  Response: { status: "online/offline", last_sync, signal_strength, ... }
+  Status: 200 OK
+
+POST /inverters/:inverter_id/wifi-config
+  Headers: Authorization: Bearer {token}
+  Request: { "ssid", "password", "security_type" }
+  Response: { message: "Wi-Fi configuration sent", status }
+  Status: 200 OK / 400 Bad Request
+
+─── ENERGY DATA ENDPOINTS ──────────────────────────────────────────────────
+
+GET /inverters/:inverter_id/readings/current
+  Headers: Authorization: Bearer {token}
+  Response: { solar_power_w, grid_power_w, battery_charge_percent, ... }
+  Status: 200 OK
+
+GET /inverters/:inverter_id/readings/hourly
+  Headers: Authorization: Bearer {token}
+  Query: ?date=2024-06-11&start_hour=0&end_hour=23
+  Response: { readings: [...hourly data...] }
+  Status: 200 OK
+
+GET /inverters/:inverter_id/readings/daily
+  Headers: Authorization: Bearer {token}
+  Query: ?start_date=2024-06-01&end_date=2024-06-30
+  Response: { readings: [...daily summaries...] }
+  Status: 200 OK
+
+GET /inverters/:inverter_id/readings/monthly
+  Headers: Authorization: Bearer {token}
+  Query: ?year=2024&month=6
+  Response: { readings: {...monthly data...} }
+  Status: 200 OK
+
+GET /inverters/:inverter_id/trends
+  Headers: Authorization: Bearer {token}
+  Query: ?period=hourly|daily|monthly&date=2024-06-11
+  Response: { trend_data: [...], chart_data: {...} }
+  Status: 200 OK
+
+POST /inverters/:inverter_id/readings (For inverter to push data)
+  Headers: Authorization: Bearer {inverter_token}
+  Request: { 
+    "timestamp",
+    "solar_power_w",
+    "grid_power_w",
+    "load_power_w",
+    "battery_power_w",
+    "battery_charge_percent",
+    ... all sensor data
+  }
+  Response: { message: "Data received", data_id }
+  Status: 201 Created
+
+─── INSIGHTS & ANALYTICS ENDPOINTS ─────────────────────────────────────────
+
+GET /inverters/:inverter_id/insights/daily
+  Headers: Authorization: Bearer {token}
+  Query: ?date=2024-06-11
+  Response: {
+    self_consumption_percent: 58,
+    peak_generation_kw: 4.8,
+    peak_time: "12:00",
+    avg_generation_kw: 2.5,
+    savings: 145.50,
+    ...
+  }
+  Status: 200 OK
+
+GET /inverters/:inverter_id/insights/weekly
+  Headers: Authorization: Bearer {token}
+  Query: ?end_date=2024-06-11
+  Response: { daily_breakdown: [...], trends: {...} }
+  Status: 200 OK
+
+GET /inverters/:inverter_id/insights/monthly
+  Headers: Authorization: Bearer {token}
+  Query: ?year=2024&month=6
+  Response: { monthly_stats: {...}, comparison_to_last_month: {...} }
+  Status: 200 OK
+
+─── POWER CUT TRACKING ENDPOINTS ───────────────────────────────────────────
+
+GET /inverters/:inverter_id/power-cuts
+  Headers: Authorization: Bearer {token}
+  Query: ?start_date=2024-06-01&end_date=2024-06-30&page=1&limit=20
+  Response: {
+    events: [
+      { event_id, start_time, end_time, duration_minutes, severity },
+      ...
+    ],
+    total_events: 5,
+    total_duration_minutes: 690,
+    avg_duration_minutes: 138
+  }
+  Status: 200 OK
+
+POST /inverters/:inverter_id/power-cuts (Auto-detected by inverter)
+  Headers: Authorization: Bearer {inverter_token}
+  Request: { "start_time", "end_time", "severity" }
+  Response: { event_id, recorded_at }
+  Status: 201 Created
+
+─── SAVINGS & FINANCIAL ENDPOINTS ──────────────────────────────────────────
+
+GET /inverters/:inverter_id/savings/summary
+  Headers: Authorization: Bearer {token}
+  Query: ?period=day|month|year&date=2024-06-11
+  Response: {
+    total_savings: 145.50,
+    daily_average: 48.50,
+    roi_percentage: 8.36,
+    break_even_months: 36,
+    investment_amount: 1740,
+    ...
+  }
+  Status: 200 OK
+
+GET /inverters/:inverter_id/savings/history
+  Headers: Authorization: Bearer {token}
+  Query: ?start_date=2024-06-01&end_date=2024-06-30
+  Response: { daily_savings: [...], total: {...} }
+  Status: 200 OK
+
+─── ENVIRONMENTAL IMPACT ENDPOINTS ─────────────────────────────────────────
+
+GET /inverters/:inverter_id/environmental/impact
+  Headers: Authorization: Bearer {token}
+  Query: ?date=2024-06-11
+  Response: {
+    trees_planted_equivalent: 0.81,
+    co2_saved_kg: 48.64,
+    fuel_saved_liters: 15.2,
+    water_saved_liters: 125.8
+  }
+  Status: 200 OK
+
+GET /inverters/:inverter_id/environmental/history
+  Headers: Authorization: Bearer {token}
+  Query: ?start_date=2024-06-01&end_date=2024-06-30
+  Response: { daily_impact: [...], cumulative: {...} }
+  Status: 200 OK
+
+─── NOTIFICATIONS ENDPOINTS ────────────────────────────────────────────────
+
+GET /notifications
+  Headers: Authorization: Bearer {token}
+  Query: ?page=1&limit=20&unread_only=false
+  Response: {
+    notifications: [...],
+    total: 100,
+    unread_count: 5
+  }
+  Status: 200 OK
+
+GET /notifications/unread-count
+  Headers: Authorization: Bearer {token}
+  Response: { unread_count: 5 }
+  Status: 200 OK
+
+PUT /notifications/:notification_id/read
+  Headers: Authorization: Bearer {token}
+  Response: { message: "Marked as read" }
+  Status: 200 OK
+
+PUT /notifications/mark-all-read
+  Headers: Authorization: Bearer {token}
+  Response: { message: "All marked as read" }
+  Status: 200 OK
+
+DELETE /notifications/:notification_id
+  Headers: Authorization: Bearer {token}
+  Response: { message: "Notification deleted" }
+  Status: 200 OK
+
+POST /notifications/preferences
+  Headers: Authorization: Bearer {token}
+  Request: {
+    "alerts_enabled": true,
+    "daily_summary_enabled": true,
+    "weekly_report_enabled": true,
+    "push_notifications": true,
+    "email_notifications": true
+  }
+  Response: { saved_preferences }
+  Status: 200 OK
+
+─── REAL-TIME DATA ENDPOINTS (WebSocket) ───────────────────────────────────
+
+WS /ws/inverters/:inverter_id/live
+  Headers: Authorization: Bearer {token}
+  Events:
+  - energy_reading: Sent every 5-30 seconds with live data
+  - status_change: When inverter status changes
+  - alert: Critical alerts
+  - power_cut_detected: When power cut starts/ends
+
+Example Live Data Event:
+{
+  "type": "energy_reading",
+  "data": {
+    "timestamp": "2024-06-11T14:30:45Z",
+    "solar_power_w": 2850,
+    "grid_power_w": -500,
+    "load_power_w": 1200,
+    "battery_charge_percent": 85.5
+  }
+}
+
+═══════════════════════════════════════════════════════════════════════════════
+4. WORK BREAKDOWN & EFFORT ESTIMATION
+═══════════════════════════════════════════════════════════════════════════════
+
+PHASE 1: FOUNDATION & AUTHENTICATION (Week 1-2)
+────────────────────────────────────────────────────────────────────────────
+Tasks:
+  ✓ Project setup (Node.js/Express, PostgreSQL, Docker)          - 2 days
+  ✓ Database schema creation & migrations                        - 2 days
+  ✓ User authentication (JWT, OAuth2, refresh tokens)            - 3 days
+  ✓ User profile management endpoints                            - 2 days
+  ✓ Password reset & email verification flow                     - 2 days
+  ✓ Input validation & error handling middleware                 - 1 day
+  ✓ API documentation (Swagger/OpenAPI)                          - 1 day
+  ──────────────────────────────────────────────────────────────
+  Total: ~14 days | Effort: 112 hours
+
+PHASE 2: INVERTER MANAGEMENT (Week 3-4)
+────────────────────────────────────────────────────────────────────────────
+Tasks:
+  ✓ Inverter pairing & discovery endpoints                       - 3 days
+  ✓ Inverter status monitoring & health checks                   - 2 days
+  ✓ Wi-Fi configuration endpoint & commands                      - 2 days
+  ✓ Inverter data push endpoint (for inverter integration)       - 2 days
+  ✓ Device token management & security                           - 1 day
+  ✓ Firmware update check endpoint                               - 1 day
+  ────────────────────────────────────────────────────────────────
+  Total: ~11 days | Effort: 88 hours
+
+PHASE 3: ENERGY DATA & REAL-TIME (Week 5-6)
+────────────────────────────────────────────────────────────────────────────
+Tasks:
+  ✓ Energy readings storage & optimization                       - 2 days
+  ✓ Real-time data streaming (WebSocket setup)                   - 3 days
+  ✓ Time-series data queries (hourly/daily/monthly)              - 3 days
+  ✓ Data caching (Redis) for performance                         - 2 days
+  ✓ Historical data aggregation (daily/monthly summaries)        - 2 days
+  ✓ Data cleanup & archiving strategy                            - 1 day
+  ────────────────────────────────────────────────────────────────
+  Total: ~13 days | Effort: 104 hours
+
+PHASE 4: INSIGHTS & ANALYTICS (Week 7-8)
+────────────────────────────────────────────────────────────────────────────
+Tasks:
+  ✓ Self-consumption percentage calculation                      - 2 days
+  ✓ Peak generation time analysis                                - 1 day
+  ✓ Weekly/monthly trend calculations                            - 2 days
+  ✓ Efficiency metrics & performance scoring                     - 2 days
+  ✓ Comparative analysis (day-to-day, month-to-month)            - 2 days
+  ✓ Insights endpoints & caching                                 - 2 days
+  ────────────────────────────────────────────────────────────────
+  Total: ~11 days | Effort: 88 hours
+
+PHASE 5: FINANCIAL & SAVINGS (Week 9-10)
+────────────────────────────────────────────────────────────────────────────
+Tasks:
+  ✓ Electricity rate configuration per region                    - 1 day
+  ✓ Daily/monthly savings calculation                            - 2 days
+  ✓ ROI computation & break-even analysis                        - 2 days
+  ✓ Revenue from grid export calculation                         - 1 day
+  ✓ Financial reporting endpoints                                - 2 days
+  ✓ Multi-currency support                                       - 1 day
+  ────────────────────────────────────────────────────────────────
+  Total: ~9 days | Effort: 72 hours
+
+PHASE 6: ENVIRONMENTAL & POWER CUTS (Week 11-12)
+────────────────────────────────────────────────────────────────────────────
+Tasks:
+  ✓ Environmental impact calculations (CO2, trees, water)        - 2 days
+  ✓ Power cut detection & logging                                - 2 days
+  ✓ Power cut severity analysis                                  - 1 day
+  ✓ Outage history & statistics                                  - 1 day
+  ✓ Environmental history tracking                               - 1 day
+  ✓ API endpoints for all above                                  - 2 days
+  ────────────────────────────────────────────────────────────────
+  Total: ~9 days | Effort: 72 hours
+
+PHASE 7: NOTIFICATIONS & ALERTS (Week 13-14)
+────────────────────────────────────────────────────────────────────────────
+Tasks:
+  ✓ Notification system database & models                        - 2 days
+  ✓ Alert trigger rules & event system                           - 3 days
+  ✓ Email notification service (SendGrid/Mailgun)                - 2 days
+  ✓ Push notifications (Firebase Cloud Messaging)                - 2 days
+  ✓ Notification preferences management                          - 1 day
+  ✓ Daily/weekly report generation                               - 2 days
+  ────────────────────────────────────────────────────────────────
+  Total: ~12 days | Effort: 96 hours
+
+PHASE 8: ADMIN & MONITORING (Week 15-16)
+────────────────────────────────────────────────────────────────────────────
+Tasks:
+  ✓ Admin dashboard API endpoints                                - 3 days
+  ✓ User management (admin view)                                 - 2 days
+  ✓ System logs & analytics                                      - 2 days
+  ✓ Error tracking & monitoring (Sentry)                         - 1 day
+  ✓ Performance optimization & profiling                         - 2 days
+  ────────────────────────────────────────────────────────────────
+  Total: ~10 days | Effort: 80 hours
+
+PHASE 9: TESTING & DEPLOYMENT (Week 17-18)
+────────────────────────────────────────────────────────────────────────────
+Tasks:
+  ✓ Unit tests (70% code coverage)                               - 4 days
+  ✓ Integration tests (all endpoints)                            - 3 days
+  ✓ Load testing & stress testing                                - 2 days
+  ✓ Security testing (OWASP Top 10)                              - 2 days
+  ✓ Docker setup & containerization                              - 1 day
+  ✓ CI/CD pipeline (GitHub Actions/Jenkins)                      - 2 days
+  ✓ Production deployment & monitoring                           - 2 days
+  ────────────────────────────────────────────────────────────────
+  Total: ~16 days | Effort: 128 hours
+
+───────────────────────────────────────────────────────────────────────────────
+GRAND TOTAL: 18 WEEKS (~4.5 months)
+───────────────────────────────────────────────────────────────────────────────
+Total Development Hours: ~840 hours
+Development Team: 2 Backend Developers (recommended)
+Timeline with 2 devs: ~10-12 weeks (2.5-3 months)
+
+═══════════════════════════════════════════════════════════════════════════════
+5. DETAILED TECHNOLOGY STACK
+═══════════════════════════════════════════════════════════════════════════════
+
+BACKEND FRAMEWORK:
+- Node.js v18+ with Express.js
+  OR
+- Python 3.10+ with FastAPI
+
+DATABASE:
+- PostgreSQL 14+ (Primary relational database)
+- Redis (Caching, session management, real-time data)
+
+AUTHENTICATION & SECURITY:
+- JWT (JSON Web Tokens)
+- bcryptjs (Password hashing)
+- cors (Cross-Origin Resource Sharing)
+- helmet (Security headers)
+- rate-limit (API rate limiting)
+
+REAL-TIME COMMUNICATION:
+- Socket.io (WebSocket for live data streaming)
+- OR Pusher (Third-party alternative)
+
+EXTERNAL SERVICES:
+- SendGrid / Mailgun (Email notifications)
+- Firebase Cloud Messaging (Push notifications)
+- AWS S3 (File storage for reports)
+- Twilio (SMS notifications - optional)
+
+MONITORING & LOGGING:
+- Winston (Logging)
+- Sentry (Error tracking)
+- DataDog (Performance monitoring)
+- Prometheus + Grafana (Metrics visualization)
+
+TESTING:
+- Jest (Unit testing)
+- Supertest (Integration testing)
+- Artillery (Load testing)
+- OWASP ZAP (Security testing)
+
+DEPLOYMENT:
+- Docker (Containerization)
+- Docker Compose (Local development)
+- GitHub Actions (CI/CD)
+- AWS ECS / Google Cloud Run (Deployment)
+- Nginx (Reverse proxy)
+
+DEVELOPMENT TOOLS:
+- Git + GitHub
+- VS Code / Jetbrains WebStorm
+- Postman (API testing)
+- Swagger/OpenAPI (Documentation)
+
+═══════════════════════════════════════════════════════════════════════════════
+6. INVERTER INTEGRATION GUIDE
+═══════════════════════════════════════════════════════════════════════════════
+
+HOW THE INVERTER WILL COMMUNICATE WITH BACKEND:
+─────────────────────────────────────────────────────────────────────────────
+
+1. INVERTER REGISTRATION:
+   Inverter → POST /inverters/register
+   {
+     "serial_number": "9AL1021Z100407",
+     "model": "Hybrid 5KVA",
+     "firmware": "v2.1.4",
+     "mac_address": "00:1A:2B:3C:4D:5E"
+   }
+   Response: { inverter_token, heartbeat_interval: 30000 }
+
+2. DATA PUSH (Every 30 seconds):
+   Inverter → POST /inverters/{id}/readings
+   Headers: Authorization: Bearer {inverter_token}
+   {
+     "timestamp": "2024-06-11T14:30:45Z",
+     "solar_power_w": 2850,
+     "grid_power_w": -500,
+     "load_power_w": 1200,
+     "battery_power_w": 0,
+     "battery_charge_percent": 85,
+     "temperature_c": 35,
+     "humidity_percent": 65,
+     "signal_strength": -45
+   }
+
+3. HEARTBEAT (Every 5 minutes):
+   Inverter → POST /inverters/{id}/heartbeat
+   Response: { status: "ok", config_update?: {...} }
+
+4. EVENT NOTIFICATIONS:
+   Inverter → POST /inverters/{id}/events
+   Types: grid_disconnect, grid_reconnect, battery_low, over_temp, etc.
+
+5. STATUS QUERIES (On demand):
+   Backend → GET /devices/{inverter_id}/status
+   Inverter checks status of backend connection & configuration
+
+═══════════════════════════════════════════════════════════════════════════════
+7. SCALABILITY CONSIDERATIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+For 10,000 Users:
+- Database: PostgreSQL with read replicas
+- Caching: Redis cluster for distributed caching
+- Message Queue: RabbitMQ / Apache Kafka for async tasks
+- CDN: CloudFlare / Cloudfront for static assets
+- Load Balancer: AWS ELB / Nginx
+
+For 100,000 Users:
+- Microservices architecture
+  * Auth Service (separate)
+  * Data Service (separate)
+  * Analytics Service (separate)
+  * Notification Service (separate)
+- Kubernetes for orchestration
+- Time-series database: InfluxDB for sensor data
+- Data warehouse: Snowflake / BigQuery for analytics
+
+Data Retention:
+- Raw readings: 1 month (archive to S3 after)
+- Daily summaries: 2 years
+- Monthly summaries: Unlimited
+- Notifications: 3 months
+
+═══════════════════════════════════════════════════════════════════════════════
+8. API SECURITY CONSIDERATIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+Authentication:
+✓ JWT tokens with 15-minute expiry
+✓ Refresh tokens with 30-day expiry
+✓ OAuth2 for third-party integrations
+
+Authorization:
+✓ Role-based access control (RBAC)
+✓ Resource-level permissions
+✓ Rate limiting (100 requests/minute per user)
+
+Data Protection:
+✓ HTTPS/TLS for all communications
+✓ Data encryption at rest (AES-256)
+✓ Database encryption
+✓ API key rotation every 90 days
+
+Validation:
+✓ Input sanitization
+✓ SQL injection prevention (parameterized queries)
+✓ CORS properly configured
+✓ CSRF protection
+
+═══════════════════════════════════════════════════════════════════════════════
+9. DEPLOYMENT ARCHITECTURE
+═══════════════════════════════════════════════════════════════════════════════
+
+PRODUCTION ENVIRONMENT:
+
+                          ┌─────────────────┐
+                          │   CloudFlare    │ (DDoS Protection)
+                          └────────┬────────┘
+                                   │
+                    ┌──────────────┼──────────────┐
+                    │                             │
+            ┌───────▼──────┐          ┌──────────▼──────┐
+            │ Load Balancer│          │  Load Balancer  │
+            │  (Primary)   │          │  (Secondary)    │
+            └───────┬──────┘          └─────────┬───────┘
+                    │                          │
+        ┌───────────┼───────────┐    ┌────────┼────────┐
+        │           │           │    │        │        │
+    ┌───▼───┐  ┌───▼───┐  ┌───▼───┐│  ┌──▼───┐  ┌──▼───┐
+    │ Node  │  │ Node  │  │ Node  ││  │ Node │  │ Node │
+    │ API-1 │  │ API-2 │  │ API-3 ││  │ API-4│  │ API-5│
+    └───┬───┘  └───┬───┘  └───┬───┘│  └──┬───┘  └──┬───┘
+        │          │          │    │     │         │
+        └──────────┼──────────┘    └─────┼─────────┘
+                   │                     │
+                ┌──▼─────────────────────▼──┐
+                │   PostgreSQL Primary      │
+                │  (Master - Writes)        │
+                └──┬──────────────────────┬─┘
+                   │                      │
+        ┌──────────▼──┐        ┌─────────▼──────┐
+        │ PostgreSQL  │        │  PostgreSQL    │
+        │ Replica-1   │        │  Replica-2     │
+        │ (Read-only) │        │  (Read-only)   │
+        └─────────────┘        └────────────────┘
+                   │                      │
+                   └──────────┬───────────┘
+                              │
+                        ┌─────▼─────┐
+                        │   Redis   │
+                        │  (Cache)  │
+                        └───────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+10. RECOMMENDED DEVELOPMENT TIMELINE
+═══════════════════════════════════════════════════════════════════════════════
+
+WEEK 1-2:   Foundation (Node.js, Express, PostgreSQL, Auth)
+WEEK 3-4:   Inverter Management & Device Integration
+WEEK 5-6:   Real-time Data Streaming & Caching
+WEEK 7-8:   Analytics & Insights Engine
+WEEK 9-10:  Financial Module (Savings, ROI)
+WEEK 11-12: Environmental Impact & Power Cuts
+WEEK 13-14: Notifications & Alerts System
+WEEK 15-16: Admin Dashboard & Monitoring
+WEEK 17-18: Testing, Security Audit & Deployment
+
+PARALLEL TRACKS (Starting Week 3):
+- Mobile app integration testing (with staging backend)
+- Frontend API contract testing
+- Documentation & Postman collections
+- DevOps & Infrastructure setup
+
+═══════════════════════════════════════════════════════════════════════════════
+11. ESTIMATED COSTS
+═══════════════════════════════════════════════════════════════════════════════
+
+DEVELOPMENT COST (India rates):
+- Senior Backend Engineer: ₹80,000-120,000/month × 4.5 months
+- Junior Backend Engineer: ₹40,000-60,000/month × 4.5 months
+- DevOps Engineer: ₹70,000-100,000/month × 2 months
+- QA Engineer: ₹50,000-70,000/month × 2 months
+──────────────────────────────────────────────────────────
+Total Dev Team: ₹17-22 Lakhs
+
+INFRASTRUCTURE (AWS):
+- RDS PostgreSQL (db.t3.small): ~₹5,000/month
+- ElastiCache Redis (cache.t3.micro): ~₹2,500/month
+- EC2 instances (3x t3.medium): ~₹15,000/month
+- Data Transfer & Bandwidth: ~₹3,000/month
+- Backups & Storage (S3): ~₹2,000/month
+- CloudFront CDN: ~₹1,000/month
+──────────────────────────────────────────────────────────
+Total Infrastructure (First Year): ~₹3.6 Lakhs
+(Monthly: ~₹28,500)
+
+EXTERNAL SERVICES:
+- SendGrid (Email): ₹500/month
+- Firebase (Push notifications): Free tier + ₹1,000/month
+- Sentry (Error tracking): ₹500/month
+- DataDog (Monitoring): ₹2,000/month
+──────────────────────────────────────────────────────────
+Total Services: ~₹4,000/month
+
+TOTAL FIRST YEAR: ₹17-22 Lakhs (Dev) + ₹3.6 Lakhs (Infra) + ₹48K (Services)
+= ₹21-26 Lakhs total
+
+ONGOING YEARLY: ₹3.6L + 48K + Maintenance = ~₹4.5 Lakhs/year
+
+═══════════════════════════════════════════════════════════════════════════════
+12. SUCCESS METRICS & DELIVERABLES
+═══════════════════════════════════════════════════════════════════════════════
+
+DELIVERABLES:
+✓ Complete REST API with 40+ endpoints
+✓ PostgreSQL database with optimized schema
+✓ Real-time WebSocket server
+✓ Comprehensive API documentation (Swagger)
+✓ Integration tests (90%+ code coverage)
+✓ Docker containerization & CI/CD pipeline
+✓ Security audit report
+✓ Performance benchmarks
+
+PERFORMANCE TARGETS:
+- API Response time: < 200ms (p95)
+- Real-time data latency: < 500ms
+- Database query time: < 100ms
+- System uptime: 99.9%
+- Concurrent connections: 10,000+
+
+═══════════════════════════════════════════════════════════════════════════════
+END OF DOCUMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+For questions or clarifications, refer to the API sections above.
+Backend development should start immediately after frontend is stabilized.
