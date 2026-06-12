@@ -138,7 +138,7 @@ class MeScreen extends StatelessWidget {
                       const _SectionLabel('Help & Support'),
                       _MenuGroup(
                         items: const [
-                          _MenuItem(Icons.notifications_outline_rounded, 'Notifications',
+                          _MenuItem(Icons.notifications_outlined, 'Notifications',
                               'View all alerts'),
                           _MenuItem(Icons.help_outline_rounded, 'FAQ',
                               'Common questions answered'),
