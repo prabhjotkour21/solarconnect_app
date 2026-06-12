@@ -499,7 +499,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
                         ],
                       ),
                     ],
-                  ), //Row in this line  in colum and romw
+                  ), //Row in this line  in colum and romw in this line i have ot add 3 comment
                   const SizedBox(height: 12),
                   Text(
                     'Your system will pay for itself in ${savings.roiMonthsDisplay}',
