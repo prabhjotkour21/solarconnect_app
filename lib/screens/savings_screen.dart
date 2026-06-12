@@ -149,7 +149,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
   Future<void> _pickCustomRange() async {
     final range = await showDateRangePicker(
       context: context,
-      firstDate: DateTime(2023),
+      firstDate: DateTime(2020),
       lastDate: DateTime.now(),
       initialDateRange: _customRange,
       builder: (ctx, child) => Theme(
@@ -157,6 +157,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
           colorScheme: ColorScheme.dark(
             primary: AppColors.success,
             surface: AppColors.surfaceDark,
+            onSurface: AppColors.textPrimary,
           ),
         ),
         child: child!,
@@ -164,7 +165,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
     );
     if (range != null) {
       final days = range.end.difference(range.start).inDays + 1;
-      final total = (days * 48.0);
+      final total = days * 48.0;
       setState(() {
         _customRange = range;
         _periodData[_Period.custom]!['totalSavings'] = total;
@@ -173,9 +174,9 @@ class _SavingsScreenState extends State<SavingsScreen> {
         _periodData[_Period.custom]!['label'] =
             '${range.start.day}/${range.start.month} – ${range.end.day}/${range.end.month}';
         _periodData[_Period.custom]!['bars'] = [
-          {'label': 'Day 1', 'value': 44},
+          {'label': 'Start', 'value': 44},
           {'label': 'Mid', 'value': (days * 48 / 3).round()},
-          {'label': 'Day $days', 'value': 50},
+          {'label': 'End', 'value': 50},
         ];
       });
     }
@@ -318,12 +319,26 @@ class _SavingsScreenState extends State<SavingsScreen> {
                 }),
                 GestureDetector(
                   onTap: () => _onPeriodTap(_Period.custom),
-                  child: Icon(
-                    Icons.menu_rounded,
-                    size: 22,
-                    color: _selectedPeriod == _Period.custom
-                        ? AppColors.success
-                        : AppColors.textSecondary,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: _selectedPeriod == _Period.custom
+                          ? AppColors.success.withValues(alpha: 0.2)
+                          : AppColors.surfaceDark,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _selectedPeriod == _Period.custom
+                            ? AppColors.success.withValues(alpha: 0.5)
+                            : AppColors.surfaceDark,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.menu_rounded,
+                      size: 16,
+                      color: _selectedPeriod == _Period.custom
+                          ? AppColors.success
+                          : AppColors.textSecondary,
+                    ),
                   ),
                 ),
               ],
@@ -624,3 +639,4 @@ class _MonthBar extends StatelessWidget {
     );
   }
 }
+
