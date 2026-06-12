@@ -499,7 +499,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
                         ],
                       ),
                     ],
-                  ), //Row in this line
+                  ), //Row in this line  in colum and romw
                   const SizedBox(height: 12),
                   Text(
                     'Your system will pay for itself in ${savings.roiMonthsDisplay}',
