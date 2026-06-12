@@ -320,7 +320,10 @@ class _SavingsScreenState extends State<SavingsScreen> {
                 GestureDetector(
                   onTap: () => _onPeriodTap(_Period.custom),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: _selectedPeriod == _Period.custom
                           ? AppColors.success.withValues(alpha: 0.2)
@@ -496,7 +499,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
                         ],
                       ),
                     ],
-                  ),
+                  ), //Row in this line
                   const SizedBox(height: 12),
                   Text(
                     'Your system will pay for itself in ${savings.roiMonthsDisplay}',
@@ -639,4 +642,3 @@ class _MonthBar extends StatelessWidget {
     );
   }
 }
-
