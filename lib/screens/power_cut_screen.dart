@@ -353,24 +353,30 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
     const yLabelW = 36.0;
     const itemW = 46.0;
 
-    final maxConsumed = events
-        .map((e) => e.consumedPowerKw)
-        .reduce((a, b) => a > b ? a : b);
-    final maxSolar = maxConsumed * 0.85;
-    // Y-axis based on the higher of the two (consumed)
-    final yMax = (maxConsumed * 1.2);
+    final consumedVals = events.map((e) => e.consumedPowerKw).toList();
+    final solarVals    = events.map((e) => e.solarPowerKw).toList();
+
+    // Use a shared Y-max so both lines are on the same scale
+    final allVals = [...consumedVals, ...solarVals];
+    final dataMax = allVals.reduce((a, b) => a > b ? a : b);
+    final yMax = dataMax * 1.25; // 25% headroom
+
     final ySteps = List.generate(5, (i) => yMax * (1 - i / 4));
+
+    // Colors — clearly distinct
+    const consumedColor = Color(0xFFFF6B35); // vivid orange
+    const solarColor    = Color(0xFF00E676); // bright green
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Legend
         Wrap(
-          spacing: 14,
+          spacing: 16,
           runSpacing: 4,
           children: [
-            _legendLine(Colors.cyanAccent, 'Consuming Power (kW)'),
-            _legendDash(Colors.greenAccent, 'Solar Generated (kW)'),
+            _legendLine(consumedColor, 'Consuming Power (kW)'),
+            _legendDash(solarColor, 'Solar Generated (kW)'),
           ],
         ),
         const SizedBox(height: 10),
@@ -401,7 +407,7 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: ySteps
                               .map((v) => Text(
-                                    '${v.toStringAsFixed(1)}',
+                                    v.toStringAsFixed(1),
                                     style: const TextStyle(
                                         color: Colors.white38, fontSize: 9),
                                   ))
@@ -415,7 +421,7 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
               ],
             ),
             const SizedBox(width: 4),
-            // Chart area — lines only
+            // Chart area
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -439,29 +445,30 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
                                 ),
                               ),
                             ),
-                            // Consuming Power line (solid cyan)
+                            // Solar Generated — dashed green, filled
                             CustomPaint(
                               size: Size(events.length * itemW, chartH),
                               painter: _LinePainter(
-                                events: events,
-                                maxPower: yMax,
+                                values: solarVals,
+                                yMax: yMax,
                                 chartH: chartH,
                                 itemW: itemW,
-                                color: Colors.cyanAccent,
-                                useSolar: false,
+                                color: solarColor,
+                                filled: true,
+                                dashed: true,
                               ),
                             ),
-                            // Solar Generated line (dashed green)
+                            // Consuming Power — solid orange, filled
                             CustomPaint(
                               size: Size(events.length * itemW, chartH),
                               painter: _LinePainter(
-                                events: events,
-                                maxPower: yMax,
+                                values: consumedVals,
+                                yMax: yMax,
                                 chartH: chartH,
                                 itemW: itemW,
-                                color: Colors.greenAccent,
-                                useSolar: true,
-                                solarMaxPower: maxSolar,
+                                color: consumedColor,
+                                filled: true,
+                                dashed: false,
                               ),
                             ),
                           ],
@@ -608,96 +615,99 @@ class _StatCard extends StatelessWidget {
 
 // ── Line painter for power overlay lines ──────────────────────────────────────
 class _LinePainter extends CustomPainter {
-  final List<PowerCutEvent> events;
-  final double maxPower;
+  final List<double> values;   // actual data points to plot
+  final double yMax;           // top of the Y scale
   final double chartH;
   final double itemW;
   final Color color;
-  final bool useSolar;
-  final double solarMaxPower;
+  final bool filled;           // whether to fill area under the line
+  final bool dashed;
 
   const _LinePainter({
-    required this.events,
-    required this.maxPower,
+    required this.values,
+    required this.yMax,
     required this.chartH,
     required this.itemW,
     required this.color,
-    this.useSolar = false,
-    this.solarMaxPower = 0,
+    this.filled = false,
+    this.dashed = false,
   });
+
+  Offset _pointAt(int i) {
+    final x = i * itemW + itemW / 2;
+    final ratio = yMax > 0 ? (values[i] / yMax).clamp(0.0, 1.0) : 0.0;
+    final y = chartH - ratio * (chartH - 8);
+    return Offset(x, y);
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (events.isEmpty) return;
+    if (values.isEmpty) return;
 
-    final paint = Paint()
+    // ── filled area under the line ──
+    if (filled) {
+      final fillPath = Path();
+      fillPath.moveTo(_pointAt(0).dx, chartH);
+      for (int i = 0; i < values.length; i++) {
+        fillPath.lineTo(_pointAt(i).dx, _pointAt(i).dy);
+      }
+      fillPath.lineTo(_pointAt(values.length - 1).dx, chartH);
+      fillPath.close();
+      canvas.drawPath(
+        fillPath,
+        Paint()
+          ..color = color.withOpacity(0.15)
+          ..style = PaintingStyle.fill,
+      );
+    }
+
+    // ── line path ──
+    final linePath = Path();
+    linePath.moveTo(_pointAt(0).dx, _pointAt(0).dy);
+    for (int i = 1; i < values.length; i++) {
+      linePath.lineTo(_pointAt(i).dx, _pointAt(i).dy);
+    }
+
+    final linePaint = Paint()
       ..color = color
-      ..strokeWidth = 2.0
+      ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    // Dashed pattern for solar line
-    final isDashed = useSolar;
-
-    final path = Path();
-    for (int i = 0; i < events.length; i++) {
-      final rawVal = useSolar
-          ? events[i].consumedPowerKw * 0.72  // simulate solar as ~72% of consumed
-          : events[i].consumedPowerKw;
-      final refMax = useSolar ? (solarMaxPower > 0 ? solarMaxPower : maxPower) : maxPower;
-
-      final x = i * itemW + itemW / 2;
-      final ratio = refMax > 0 ? (rawVal / refMax).clamp(0.0, 1.0) : 0.0;
-      final y = chartH - ratio * chartH;
-
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-
-    if (isDashed) {
-      _drawDashedPath(canvas, path, paint);
+    if (dashed) {
+      _drawDashed(canvas, linePath, linePaint);
     } else {
-      canvas.drawPath(path, paint);
+      canvas.drawPath(linePath, linePaint);
     }
 
-    // Draw dots at each data point
+    // ── dots at each data point ──
     final dotPaint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
+    final dotRing = Paint()
+      ..color = Colors.black.withOpacity(0.6)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
 
-    for (int i = 0; i < events.length; i++) {
-      final rawVal = useSolar
-          ? events[i].consumedPowerKw * 0.72
-          : events[i].consumedPowerKw;
-      final refMax = useSolar ? (solarMaxPower > 0 ? solarMaxPower : maxPower) : maxPower;
-
-      final x = i * itemW + itemW / 2;
-      final ratio = refMax > 0 ? (rawVal / refMax).clamp(0.0, 1.0) : 0.0;
-      final y = chartH - ratio * chartH;
-
-      canvas.drawCircle(Offset(x, y), 3.0, dotPaint);
+    for (int i = 0; i < values.length; i++) {
+      final p = _pointAt(i);
+      canvas.drawCircle(p, 4.0, dotPaint);
+      canvas.drawCircle(p, 4.0, dotRing);
     }
   }
 
-  void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
-    const dashLength = 6.0;
-    const gapLength = 4.0;
-
-    final metrics = path.computeMetrics();
-    for (final metric in metrics) {
-      double distance = 0.0;
+  void _drawDashed(Canvas canvas, Path path, Paint paint) {
+    const dashLen = 7.0;
+    const gapLen = 4.0;
+    for (final metric in path.computeMetrics()) {
+      double dist = 0.0;
       bool draw = true;
-      while (distance < metric.length) {
-        final len = draw ? dashLength : gapLength;
-        final end = (distance + len).clamp(0.0, metric.length);
-        if (draw) {
-          canvas.drawPath(metric.extractPath(distance, end), paint);
-        }
-        distance += len;
+      while (dist < metric.length) {
+        final seg = draw ? dashLen : gapLen;
+        final end = (dist + seg).clamp(0.0, metric.length);
+        if (draw) canvas.drawPath(metric.extractPath(dist, end), paint);
+        dist += seg;
         draw = !draw;
       }
     }
@@ -705,8 +715,5 @@ class _LinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_LinePainter old) =>
-      old.events != events ||
-      old.maxPower != maxPower ||
-      old.useSolar != useSolar ||
-      old.color != color;
+      old.values != values || old.yMax != yMax || old.color != color;
 }
