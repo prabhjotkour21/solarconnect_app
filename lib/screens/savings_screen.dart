@@ -313,6 +313,101 @@ class _SavingsScreenState extends State<SavingsScreen> {
     setState(() => _selectedPeriod = period);
   }
 
+  String get _periodLabel {
+    switch (_selectedPeriod) {
+      case _Period.today:     return 'Today';
+      case _Period.yesterday: return 'Yesterday';
+      case _Period.weekly:    return 'Weekly';
+      case _Period.monthly:   return 'Monthly';
+      case _Period.custom:
+        if (_customRange != null) {
+          return '${_customRange!.start.day}/${_customRange!.start.month}'
+              ' – ${_customRange!.end.day}/${_customRange!.end.month}';
+        }
+        return 'Custom';
+    }
+  }
+
+  void _showPeriodFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surfaceDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Select Period', style: AppTextStyles.headingMedium),
+            const SizedBox(height: 16),
+            _periodOption(Icons.today_rounded,          'Today',        _Period.today),
+            _periodOption(Icons.history_rounded,        'Yesterday',    _Period.yesterday),
+            _periodOption(Icons.view_week_rounded,      'Weekly',       _Period.weekly),
+            _periodOption(Icons.calendar_month_rounded, 'Monthly',      _Period.monthly),
+            _periodOption(Icons.date_range_rounded,     'Custom Range', _Period.custom),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _periodOption(IconData icon, String label, _Period value) {
+    final selected = _selectedPeriod == value;
+    return GestureDetector(
+      onTap: () async {
+        Navigator.pop(context);
+        if (value == _Period.custom) {
+          await _pickCustomRange();
+        }
+        setState(() => _selectedPeriod = value);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.success.withValues(alpha: 0.2)
+              : Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? AppColors.success : Colors.white.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: selected ? AppColors.success : Colors.white54, size: 20),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? AppColors.success : Colors.white70,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                fontSize: 15,
+              ),
+            ),
+            const Spacer(),
+            if (selected)
+              Icon(Icons.check_circle_rounded, color: AppColors.success, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final totalSavings = _data['totalSavings'] as double;
@@ -340,6 +435,46 @@ class _SavingsScreenState extends State<SavingsScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          // Reset to Today
+          IconButton(
+            tooltip: 'Reset to Today',
+            icon: Icon(Icons.restore_rounded, color: AppColors.success),
+            onPressed: () => setState(() {
+              _selectedPeriod = _Period.today;
+              _customRange = null;
+            }),
+          ),
+          // Filter icon
+          GestureDetector(
+            onTap: _showPeriodFilterSheet,
+            child: Container(
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.success.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                    color: AppColors.success.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.tune_rounded, color: AppColors.success, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    _periodLabel,
+                    style: TextStyle(
+                      color: AppColors.success,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -393,85 +528,6 @@ class _SavingsScreenState extends State<SavingsScreen> {
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 24),
-
-            // Filter tabs
-            Row(
-              children: [
-                ...[
-                  _Period.today,
-                  _Period.yesterday,
-                  _Period.weekly,
-                  _Period.monthly,
-                ].map((period) {
-                  final labels = {
-                    _Period.today: 'Today',
-                    _Period.yesterday: 'Yesterday',
-                    _Period.weekly: 'Weekly',
-                    _Period.monthly: 'Monthly',
-                  };
-                  final isSelected = _selectedPeriod == period;
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () => _onPeriodTap(period),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 6),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.success.withValues(alpha: 0.2)
-                              : AppColors.surfaceDark,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: isSelected
-                                ? AppColors.success.withValues(alpha: 0.5)
-                                : AppColors.surfaceDark,
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            labels[period]!,
-                            style: AppTextStyles.labelSmall.copyWith(
-                              color: isSelected
-                                  ? AppColors.success
-                                  : AppColors.textSecondary,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-                GestureDetector(
-                  onTap: () => _onPeriodTap(_Period.custom),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 10,
-                      horizontal: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _selectedPeriod == _Period.custom
-                          ? AppColors.success.withValues(alpha: 0.2)
-                          : AppColors.surfaceDark,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: _selectedPeriod == _Period.custom
-                            ? AppColors.success.withValues(alpha: 0.5)
-                            : AppColors.surfaceDark,
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.menu_rounded,
-                      size: 16,
-                      color: _selectedPeriod == _Period.custom
-                          ? AppColors.success
-                          : AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ],
             ),
             const SizedBox(height: 24),
 
