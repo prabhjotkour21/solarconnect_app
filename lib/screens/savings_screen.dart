@@ -348,7 +348,8 @@ class _SavingsScreenState extends State<SavingsScreen> {
           children: [
             // Main savings card
             Container(
-              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
@@ -364,11 +365,12 @@ class _SavingsScreenState extends State<SavingsScreen> {
                 ),
               ),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Icon(
                     Icons.savings_rounded,
-                    size: 48,
+                    size: 52,
                     color: AppColors.success,
                   ),
                   const SizedBox(height: 16),
@@ -376,9 +378,10 @@ class _SavingsScreenState extends State<SavingsScreen> {
                     '₹${savings.totalSavings.toStringAsFixed(0)}',
                     style: AppTextStyles.headingLarge.copyWith(
                       color: AppColors.success,
-                      fontSize: 42,
+                      fontSize: 48,
                       fontWeight: FontWeight.bold,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -386,6 +389,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
                     style: AppTextStyles.labelLarge.copyWith(
                       color: AppColors.textSecondary,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
