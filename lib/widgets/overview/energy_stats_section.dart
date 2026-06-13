@@ -28,7 +28,7 @@ class EnergyStatsSection extends StatelessWidget {
             childAspectRatio: 1.55,
             children: [
               SummaryCard(
-                label: "Today's Generation",
+                label: "Generation",
                 value: r.solarTodayKwh.toStringAsFixed(1),
                 unit: 'kWh',
                 icon: Icons.wb_sunny_rounded,

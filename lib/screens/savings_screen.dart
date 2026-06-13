@@ -1,14 +1,211 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../models/savings_data.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 
-class SavingsScreen extends StatelessWidget {
+enum _Period { today, yesterday, weekly, monthly, custom }
+
+// Savings data per period
+const _periodData = {
+  _Period.today: {
+    'totalSavings': 48.0,
+    'dailyAverage': 48.0,
+    'lastPeriodSavings': 48.0,
+    'label': "Today's Savings",
+    'breakdownLabel': 'Today',
+    'bars': [
+      {'label': '8AM', 'value': 10},
+      {'label': '12PM', 'value': 18},
+      {'label': '4PM', 'value': 20},
+    ],
+  },
+  _Period.yesterday: {
+    'totalSavings': 52.0,
+    'dailyAverage': 52.0,
+    'lastPeriodSavings': 52.0,
+    'label': "Yesterday's Savings",
+    'breakdownLabel': 'Yesterday',
+    'bars': [
+      {'label': '8AM', 'value': 12},
+      {'label': '12PM', 'value': 22},
+      {'label': '4PM', 'value': 18},
+    ],
+  },
+  _Period.weekly: {
+    'totalSavings': 320.0,
+    'dailyAverage': 45.7,
+    'lastPeriodSavings': 320.0,
+    'label': 'This Week\'s Savings',
+    'breakdownLabel': 'This Week',
+    'bars': [
+      {'label': 'Mon', 'value': 44},
+      {'label': 'Wed', 'value': 50},
+      {'label': 'Fri', 'value': 48},
+    ],
+  },
+  _Period.monthly: {
+    'totalSavings': 1450.0,
+    'dailyAverage': 48.3,
+    'lastPeriodSavings': 1450.0,
+    'label': 'This Month\'s Savings',
+    'breakdownLabel': 'This Month',
+    'bars': [
+      {'label': 'Jun', 'value': 89},
+      {'label': 'Jul', 'value': 120},
+      {'label': 'Aug', 'value': 145},
+    ],
+  },
+  _Period.custom: {
+    'totalSavings': 0.0,
+    'dailyAverage': 0.0,
+    'lastPeriodSavings': 0.0,
+    'label': 'Custom Period',
+    'breakdownLabel': 'Custom',
+    'bars': [
+      {'label': 'Day 1', 'value': 0},
+      {'label': 'Day 2', 'value': 0},
+      {'label': 'Day 3', 'value': 0},
+    ],
+  },
+};
+
+class SavingsScreen extends StatefulWidget {
   const SavingsScreen({super.key});
 
   @override
+  State<SavingsScreen> createState() => _SavingsScreenState();
+}
+
+class _SavingsScreenState extends State<SavingsScreen> {
+  double _investmentAmount = 1740;
+  _Period _selectedPeriod = _Period.today;
+  DateTimeRange? _customRange;
+
+  Map<String, dynamic> get _data => _periodData[_selectedPeriod]!;
+
+  void _showInvestmentDialog() {
+    final controller = TextEditingController(
+      text: _investmentAmount.toStringAsFixed(0),
+    );
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceDark,
+        title: Text('Enter Investment', style: AppTextStyles.headingMedium),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          style: AppTextStyles.labelLarge,
+          decoration: InputDecoration(
+            prefixText: '₹ ',
+            prefixStyle: AppTextStyles.labelLarge.copyWith(
+              color: AppColors.success,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(
+                color: AppColors.success.withValues(alpha: 0.4),
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: AppColors.success),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Cancel',
+              style: AppTextStyles.labelSmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              final val = double.tryParse(controller.text);
+              if (val != null && val > 0) {
+                setState(() => _investmentAmount = val);
+              }
+              Navigator.pop(ctx);
+            },
+            child: Text(
+              'Save',
+              style: AppTextStyles.labelSmall.copyWith(
+                color: AppColors.success,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickCustomRange() async {
+    final range = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      initialDateRange: _customRange,
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: ColorScheme.dark(
+            primary: AppColors.success,
+            surface: AppColors.surfaceDark,
+            onSurface: AppColors.textPrimary,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (range != null) {
+      final days = range.end.difference(range.start).inDays + 1;
+      final total = days * 48.0;
+      setState(() {
+        _customRange = range;
+        _periodData[_Period.custom]!['totalSavings'] = total;
+        _periodData[_Period.custom]!['dailyAverage'] = 48.0;
+        _periodData[_Period.custom]!['lastPeriodSavings'] = total;
+        _periodData[_Period.custom]!['label'] =
+            '${range.start.day}/${range.start.month} – ${range.end.day}/${range.end.month}';
+        _periodData[_Period.custom]!['bars'] = [
+          {'label': 'Start', 'value': 44},
+          {'label': 'Mid', 'value': (days * 48 / 3).round()},
+          {'label': 'End', 'value': 50},
+        ];
+      });
+    }
+  }
+
+  void _onPeriodTap(_Period period) {
+    if (period == _Period.custom) {
+      _pickCustomRange();
+    }
+    setState(() => _selectedPeriod = period);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final savings = SavingsData.demo();
+    final totalSavings = _data['totalSavings'] as double;
+    final dailyAverage = _data['dailyAverage'] as double;
+    final lastPeriodSavings = _data['lastPeriodSavings'] as double;
+    final periodLabel = _data['label'] as String;
+    final breakdownLabel = _data['breakdownLabel'] as String;
+    final bars = _data['bars'] as List;
+
+    final savings = SavingsData(
+      totalSavings: totalSavings,
+      dailyAverage: dailyAverage,
+      lastMonthSavings: lastPeriodSavings,
+      roi: _investmentAmount > 0 ? (totalSavings / _investmentAmount) * 100 : 0,
+      investmentAmount: _investmentAmount,
+      roi_months: _investmentAmount > 0 ? (_investmentAmount / 48).ceil() : 0,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -62,7 +259,7 @@ class SavingsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Your Total Savings',
+                    periodLabel,
                     style: AppTextStyles.labelLarge.copyWith(
                       color: AppColors.textSecondary,
                     ),
@@ -72,50 +269,91 @@ class SavingsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Time period tabs
+            // Filter tabs
             Row(
-              children: ['Yesterday', 'Month', 'Year', 'Custom'].map((period) {
-                final isFirst = period == 'Yesterday';
-                return Expanded(
+              children: [
+                ...[
+                  _Period.today,
+                  _Period.yesterday,
+                  _Period.weekly,
+                  _Period.monthly,
+                ].map((period) {
+                  final labels = {
+                    _Period.today: 'Today',
+                    _Period.yesterday: 'Yesterday',
+                    _Period.weekly: 'Weekly',
+                    _Period.monthly: 'Monthly',
+                  };
+                  final isSelected = _selectedPeriod == period;
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () => _onPeriodTap(period),
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.success.withValues(alpha: 0.2)
+                              : AppColors.surfaceDark,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.success.withValues(alpha: 0.5)
+                                : AppColors.surfaceDark,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            labels[period]!,
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: isSelected
+                                  ? AppColors.success
+                                  : AppColors.textSecondary,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+                GestureDetector(
+                  onTap: () => _onPeriodTap(_Period.custom),
                   child: Container(
-                    margin: EdgeInsets.only(right: isFirst ? 8 : 0),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 10,
+                    ),
                     decoration: BoxDecoration(
-                      color: isFirst
+                      color: _selectedPeriod == _Period.custom
                           ? AppColors.success.withValues(alpha: 0.2)
                           : AppColors.surfaceDark,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: isFirst
+                        color: _selectedPeriod == _Period.custom
                             ? AppColors.success.withValues(alpha: 0.5)
                             : AppColors.surfaceDark,
                       ),
                     ),
-                    child: Center(
-                      child: Text(
-                        period,
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: isFirst
-                              ? AppColors.success
-                              : AppColors.textSecondary,
-                        ),
-                      ),
+                    child: Icon(
+                      Icons.menu_rounded,
+                      size: 16,
+                      color: _selectedPeriod == _Period.custom
+                          ? AppColors.success
+                          : AppColors.textSecondary,
                     ),
                   ),
-                );
-              }).toList(),
+                ),
+              ],
             ),
             const SizedBox(height: 24),
 
             // Savings breakdown
-            Text(
-              'Savings Breakdown',
-              style: AppTextStyles.headingMedium,
-            ),
+            Text('Savings Breakdown', style: AppTextStyles.headingMedium),
             const SizedBox(height: 12),
 
             _SavingsCard(
-              label: 'Last 24 Hours',
+              label: breakdownLabel,
               value: '₹${savings.dailyAverage.toStringAsFixed(0)}',
               icon: Icons.calendar_today_rounded,
               color: AppColors.primary,
@@ -123,7 +361,7 @@ class SavingsScreen extends StatelessWidget {
             const SizedBox(height: 12),
 
             _SavingsCard(
-              label: 'Last Month',
+              label: 'Total Period',
               value: '₹${savings.lastMonthSavings.toStringAsFixed(0)}',
               icon: Icons.date_range_rounded,
               color: AppColors.success,
@@ -131,10 +369,7 @@ class SavingsScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // ROI and Investment
-            Text(
-              'Investment Details',
-              style: AppTextStyles.headingMedium,
-            ),
+            Text('Investment Details', style: AppTextStyles.headingMedium),
             const SizedBox(height: 12),
 
             Row(
@@ -149,8 +384,11 @@ class SavingsScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.trending_up_rounded,
-                            color: AppColors.primary, size: 24),
+                        Icon(
+                          Icons.trending_up_rounded,
+                          color: AppColors.primary,
+                          size: 24,
+                        ),
                         const SizedBox(height: 8),
                         Text(
                           'ROI',
@@ -180,8 +418,24 @@ class SavingsScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.attach_money_rounded,
-                            color: AppColors.success, size: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Icon(
+                              Icons.attach_money_rounded,
+                              color: AppColors.success,
+                              size: 24,
+                            ),
+                            GestureDetector(
+                              onTap: _showInvestmentDialog,
+                              child: Icon(
+                                Icons.edit_rounded,
+                                color: AppColors.textSecondary,
+                                size: 16,
+                              ),
+                            ),
+                          ],
+                        ),
                         const SizedBox(height: 8),
                         Text(
                           'Investment',
@@ -190,10 +444,13 @@ class SavingsScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          '₹${savings.investmentAmount.toStringAsFixed(0)}',
-                          style: AppTextStyles.headingMedium.copyWith(
-                            color: AppColors.success,
+                        GestureDetector(
+                          onTap: _showInvestmentDialog,
+                          child: Text(
+                            '₹${savings.investmentAmount.toStringAsFixed(0)}',
+                            style: AppTextStyles.headingMedium.copyWith(
+                              color: AppColors.success,
+                            ),
                           ),
                         ),
                       ],
@@ -218,8 +475,11 @@ class SavingsScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.hourglass_bottom_rounded,
-                          color: AppColors.warning, size: 24),
+                      Icon(
+                        Icons.hourglass_bottom_rounded,
+                        color: AppColors.warning,
+                        size: 24,
+                      ),
                       const SizedBox(width: 12),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,9 +497,9 @@ class SavingsScreen extends StatelessWidget {
                             ),
                           ),
                         ],
-                      ),
+                      ), // Text adding  in this line  to incress my github comment history
                     ],
-                  ),
+                  ), //Row in this line  in colum and romw in this line i have ot add 3 comment
                   const SizedBox(height: 12),
                   Text(
                     'Your system will pay for itself in ${savings.roiMonthsDisplay}',
@@ -252,11 +512,8 @@ class SavingsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Monthly trend
-            Text(
-              'Monthly Trend',
-              style: AppTextStyles.headingMedium,
-            ),
+            // Trend chart
+            Text('Savings Trend', style: AppTextStyles.headingMedium),
             const SizedBox(height: 12),
 
             Container(
@@ -270,11 +527,14 @@ class SavingsScreen extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _MonthBar(label: 'Jun', value: 89),
-                    _MonthBar(label: 'Jul', value: 120),
-                    _MonthBar(label: 'Aug', value: 145),
-                  ],
+                  children: bars
+                      .map(
+                        (b) => _MonthBar(
+                          label: b['label'] as String,
+                          value: b['value'] as int,
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ),
@@ -357,12 +617,10 @@ class _MonthBar extends StatelessWidget {
       children: [
         Container(
           width: 35,
-          height: (value / 150) * 80,
+          height: value > 0 ? (value / 150) * 80 : 4,
           decoration: BoxDecoration(
             color: AppColors.success,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(6),
-            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
           ),
         ),
         const SizedBox(height: 8),
