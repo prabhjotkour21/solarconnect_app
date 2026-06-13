@@ -3,7 +3,7 @@ import '../models/trend_data.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
-enum _SunFilter { today, weekly, monthly, yearly, custom }
+enum _Filter { today, weekly, monthly, yearly, custom }
 
 class TrendsScreen extends StatefulWidget {
   const TrendsScreen({super.key});
@@ -14,8 +14,7 @@ class TrendsScreen extends StatefulWidget {
 
 class _TrendsScreenState extends State<TrendsScreen> {
   late TrendData _trends;
-  String _selectedPeriod = 'hourly';
-  _SunFilter _sunFilter = _SunFilter.weekly;
+  _Filter _filter = _Filter.today; // default = today
   DateTimeRange? _customRange;
 
   @override
@@ -24,34 +23,24 @@ class _TrendsScreenState extends State<TrendsScreen> {
     _trends = TrendData.demo();
   }
 
-  // ── Solar generation data ──────────────────────────────────────────────────
-  List<TrendDataPoint> get _solarData {
-    switch (_selectedPeriod) {
-      case 'daily':   return _trends.dailyData;
-      case 'monthly': return _trends.monthlyData;
-      case 'yearly':  return _trends.yearlyData;
-      default:        return _trends.hourlyData;
+  // ── Both graphs use the same filter ───────────────────────────────────────
+  List<TrendDataPoint> get _data {
+    switch (_filter) {
+      case _Filter.today:   return _trends.hourlyData;
+      case _Filter.weekly:  return _trends.dailyData;
+      case _Filter.monthly: return _trends.monthlyData;
+      case _Filter.yearly:  return _trends.yearlyData;
+      case _Filter.custom:  return _trends.dailyData;
     }
   }
 
-  // ── Sunlight data per filter ───────────────────────────────────────────────
-  List<TrendDataPoint> get _sunData {
-    switch (_sunFilter) {
-      case _SunFilter.today:   return _trends.hourlyData;
-      case _SunFilter.weekly:  return _trends.dailyData;
-      case _SunFilter.monthly: return _trends.monthlyData;
-      case _SunFilter.yearly:  return _trends.yearlyData;
-      case _SunFilter.custom:  return _trends.dailyData; // fallback
-    }
-  }
-
-  String get _sunFilterLabel {
-    switch (_sunFilter) {
-      case _SunFilter.today:   return 'Today';
-      case _SunFilter.weekly:  return 'Weekly';
-      case _SunFilter.monthly: return 'Monthly';
-      case _SunFilter.yearly:  return 'Yearly';
-      case _SunFilter.custom:
+  String get _filterLabel {
+    switch (_filter) {
+      case _Filter.today:   return 'Today';
+      case _Filter.weekly:  return 'Weekly';
+      case _Filter.monthly: return 'Monthly';
+      case _Filter.yearly:  return 'Yearly';
+      case _Filter.custom:
         if (_customRange != null) {
           return '${_customRange!.start.day}/${_customRange!.start.month}'
               ' – ${_customRange!.end.day}/${_customRange!.end.month}';
@@ -60,23 +49,18 @@ class _TrendsScreenState extends State<TrendsScreen> {
     }
   }
 
-  String get _sunXAxisLabel {
-    switch (_sunFilter) {
-      case _SunFilter.today:   return 'Time of Day';
-      case _SunFilter.weekly:  return 'Day of Week';
-      case _SunFilter.monthly: return 'Month';
-      case _SunFilter.yearly:  return 'Year';
-      case _SunFilter.custom:  return 'Date';
+  String get _xAxisLabel {
+    switch (_filter) {
+      case _Filter.today:   return 'Time of Day';
+      case _Filter.weekly:  return 'Day of Week';
+      case _Filter.monthly: return 'Month';
+      case _Filter.yearly:  return 'Year';
+      case _Filter.custom:  return 'Date';
     }
   }
 
-  double get _solarMaxValue {
-    final data = _solarData;
-    return data.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2;
-  }
-
   // ── Filter bottom sheet ────────────────────────────────────────────────────
-  void _showSunFilterSheet() {
+  void _showFilterSheet() {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surfaceDark,
@@ -99,13 +83,17 @@ class _TrendsScreenState extends State<TrendsScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Text('Sunlight Period', style: AppTextStyles.headingMedium),
+            Text('Select Period', style: AppTextStyles.headingMedium),
+            const SizedBox(height: 4),
+            Text('Applies to both Solar & Sunlight graphs',
+                style: AppTextStyles.labelSmall
+                    .copyWith(color: AppColors.textSecondary)),
             const SizedBox(height: 16),
-            _filterOption(Icons.today_rounded,          'Today',   _SunFilter.today),
-            _filterOption(Icons.view_week_rounded,      'Weekly',  _SunFilter.weekly),
-            _filterOption(Icons.calendar_month_rounded, 'Monthly', _SunFilter.monthly),
-            _filterOption(Icons.calendar_today_rounded, 'Yearly',  _SunFilter.yearly),
-            _filterOption(Icons.date_range_rounded,     'Custom Range', _SunFilter.custom),
+            _filterOption(Icons.today_rounded,          'Today',        _Filter.today),
+            _filterOption(Icons.view_week_rounded,      'Weekly',       _Filter.weekly),
+            _filterOption(Icons.calendar_month_rounded, 'Monthly',      _Filter.monthly),
+            _filterOption(Icons.calendar_today_rounded, 'Yearly',       _Filter.yearly),
+            _filterOption(Icons.date_range_rounded,     'Custom Range', _Filter.custom),
             const SizedBox(height: 8),
           ],
         ),
@@ -113,15 +101,15 @@ class _TrendsScreenState extends State<TrendsScreen> {
     );
   }
 
-  Widget _filterOption(IconData icon, String label, _SunFilter value) {
-    final selected = _sunFilter == value;
+  Widget _filterOption(IconData icon, String label, _Filter value) {
+    final selected = _filter == value;
     return GestureDetector(
       onTap: () async {
         Navigator.pop(context);
-        if (value == _SunFilter.custom) {
+        if (value == _Filter.custom) {
           await _pickCustomRange();
         } else {
-          setState(() => _sunFilter = value);
+          setState(() => _filter = value);
         }
       },
       child: Container(
@@ -129,28 +117,28 @@ class _TrendsScreenState extends State<TrendsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: selected
-              ? AppColors.warning.withValues(alpha: 0.2)
+              ? AppColors.primary.withValues(alpha: 0.2)
               : Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? AppColors.warning : Colors.white.withValues(alpha: 0.1),
+            color: selected ? AppColors.primary : Colors.white.withValues(alpha: 0.1),
           ),
         ),
         child: Row(
           children: [
-            Icon(icon, color: selected ? AppColors.warning : Colors.white54, size: 20),
+            Icon(icon, color: selected ? AppColors.primary : Colors.white54, size: 20),
             const SizedBox(width: 12),
             Text(
               label,
               style: TextStyle(
-                color: selected ? AppColors.warning : Colors.white70,
+                color: selected ? AppColors.primary : Colors.white70,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                 fontSize: 15,
               ),
             ),
             const Spacer(),
             if (selected)
-              Icon(Icons.check_circle_rounded, color: AppColors.warning, size: 20),
+              Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
           ],
         ),
       ),
@@ -165,7 +153,7 @@ class _TrendsScreenState extends State<TrendsScreen> {
       initialDateRange: _customRange,
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: ColorScheme.dark(primary: AppColors.warning),
+          colorScheme: ColorScheme.dark(primary: AppColors.primary),
         ),
         child: child!,
       ),
@@ -173,7 +161,7 @@ class _TrendsScreenState extends State<TrendsScreen> {
     if (picked != null) {
       setState(() {
         _customRange = picked;
-        _sunFilter = _SunFilter.custom;
+        _filter = _Filter.custom;
       });
     }
   }
@@ -181,8 +169,8 @@ class _TrendsScreenState extends State<TrendsScreen> {
   // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final solarData = _solarData;
-    final maxVal    = _solarMaxValue;
+    final data   = _data;
+    final maxVal = data.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -194,50 +182,52 @@ class _TrendsScreenState extends State<TrendsScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          // Reset to Today
+          IconButton(
+            tooltip: 'Reset to Today',
+            icon: Icon(Icons.restore_rounded, color: AppColors.primary),
+            onPressed: () => setState(() {
+              _filter = _Filter.today;
+              _customRange = null;
+            }),
+          ),
+          // Filter icon
+          GestureDetector(
+            onTap: _showFilterSheet,
+            child: Container(
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.tune_rounded, color: AppColors.primary, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    _filterLabel,
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
-            // ── Period selector (solar generation) ──────────────────────────
-            Row(
-              children: ['Hourly', 'Daily', 'Monthly', 'Yearly']
-                  .asMap()
-                  .entries
-                  .map((e) {
-                final isSelected = _selectedPeriod == e.value.toLowerCase();
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(
-                        () => _selectedPeriod = e.value.toLowerCase()),
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 6),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.primary
-                            : AppColors.surfaceDark,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Center(
-                        child: Text(
-                          e.value,
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: isSelected
-                                ? AppColors.textPrimary
-                                : AppColors.textSecondary,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 20),
 
             // ── Solar Generation chart ───────────────────────────────────────
             Container(
@@ -249,18 +239,32 @@ class _TrendsScreenState extends State<TrendsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Solar Generation',
-                      style: AppTextStyles.headingSmall),
+                  Row(
+                    children: [
+                      Icon(Icons.bolt_rounded,
+                          color: AppColors.primary, size: 18),
+                      const SizedBox(width: 6),
+                      Text('Solar Generation',
+                          style: AppTextStyles.headingSmall),
+                    ],
+                  ),
                   const SizedBox(height: 4),
                   Text(
-                    '${solarData.first.label} – ${solarData.last.label}',
+                    '${data.first.label} – ${data.last.label}',
                     style: AppTextStyles.labelSmall
                         .copyWith(color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: 16),
-                  _buildSolarChart(solarData, maxVal),
+                  _buildBarChart(
+                    data: data,
+                    getValue: (p) => p.value,
+                    yMax: maxVal,
+                    yAxisLabel: 'Power (kW)',
+                    xAxisLabel: _xAxisLabel,
+                    valueFormat: (v) => v.toStringAsFixed(1),
+                    barColor: AppColors.primary,
+                  ),
                   const SizedBox(height: 16),
-                  // Stats row
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -279,14 +283,14 @@ class _TrendsScreenState extends State<TrendsScreen> {
                         _StatTile(
                           label: 'Max',
                           value:
-                              '${solarData.map((e) => e.value).reduce((a, b) => a > b ? a : b).toStringAsFixed(2)} kW',
+                              '${data.map((e) => e.value).reduce((a, b) => a > b ? a : b).toStringAsFixed(2)} kW',
                           icon: Icons.trending_up_rounded,
                           color: AppColors.warning,
                         ),
                         _StatTile(
                           label: 'Avg',
                           value:
-                              '${(solarData.map((e) => e.value).reduce((a, b) => a + b) / solarData.length).toStringAsFixed(2)} kW',
+                              '${(data.map((e) => e.value).reduce((a, b) => a + b) / data.length).toStringAsFixed(2)} kW',
                           icon: Icons.equalizer_rounded,
                           color: AppColors.success,
                         ),
@@ -299,66 +303,76 @@ class _TrendsScreenState extends State<TrendsScreen> {
             const SizedBox(height: 24),
 
             // ── Sunlight Hours chart ─────────────────────────────────────────
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.wb_sunny_rounded,
-                        color: AppColors.warning, size: 20),
-                    const SizedBox(width: 8),
-                    Text('Sunlight Hours',
-                        style: AppTextStyles.headingMedium),
-                  ],
-                ),
-                // Filter icon button
-                GestureDetector(
-                  onTap: _showSunFilterSheet,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.warning.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                          color: AppColors.warning.withValues(alpha: 0.4)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.tune_rounded,
-                            color: AppColors.warning, size: 16),
-                        const SizedBox(width: 6),
-                        Text(
-                          _sunFilterLabel,
-                          style: TextStyle(
-                            color: AppColors.warning,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
             Container(
               padding: const EdgeInsets.fromLTRB(8, 14, 12, 10),
               decoration: BoxDecoration(
                 color: AppColors.surfaceDark,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: _buildSunlightChart(_sunData),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.wb_sunny_rounded,
+                          color: AppColors.warning, size: 18),
+                      const SizedBox(width: 6),
+                      Text('Sunlight Hours',
+                          style: AppTextStyles.headingSmall),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${data.first.label} – ${data.last.label}',
+                    style: AppTextStyles.labelSmall
+                        .copyWith(color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSunlightChart(data),
+                  const SizedBox(height: 16),
+                  // Sunlight stats
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _StatTile(
+                          label: 'Avg / Period',
+                          value:
+                              '${(data.map((p) => p.sunlightHours).reduce((a, b) => a + b) / data.length).toStringAsFixed(1)} hrs',
+                          icon: Icons.wb_sunny_rounded,
+                          color: AppColors.warning,
+                        ),
+                        _StatTile(
+                          label: 'Peak',
+                          value:
+                              '${data.map((p) => p.sunlightHours).reduce((a, b) => a > b ? a : b).toStringAsFixed(1)} hrs',
+                          icon: Icons.light_mode_rounded,
+                          color: const Color(0xFFFF6D00),
+                        ),
+                        _StatTile(
+                          label: 'Total',
+                          value:
+                              '${data.map((p) => p.sunlightHours).reduce((a, b) => a + b).toStringAsFixed(1)} hrs',
+                          icon: Icons.calendar_today_rounded,
+                          color: AppColors.primary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 24),
 
             // ── Detailed table ───────────────────────────────────────────────
             Text('Detailed Data', style: AppTextStyles.headingMedium),
             const SizedBox(height: 12),
-            ...solarData.map((point) => Container(
+            ...data.map((point) => Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -381,13 +395,14 @@ class _TrendsScreenState extends State<TrendsScreen> {
                             minHeight: 6,
                             backgroundColor:
                                 AppColors.primary.withValues(alpha: 0.1),
-                            valueColor: AlwaysStoppedAnimation(AppColors.success),
+                            valueColor:
+                                AlwaysStoppedAnimation(AppColors.success),
                           ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       SizedBox(
-                        width: 56,
+                        width: 60,
                         child: Text(
                           '${point.value.toStringAsFixed(2)} kW',
                           style: AppTextStyles.labelSmall
@@ -404,19 +419,25 @@ class _TrendsScreenState extends State<TrendsScreen> {
     );
   }
 
-  // ── Solar bar chart ────────────────────────────────────────────────────────
-  Widget _buildSolarChart(List<TrendDataPoint> data, double maxVal) {
+  // ── Generic bar chart ──────────────────────────────────────────────────────
+  Widget _buildBarChart({
+    required List<TrendDataPoint> data,
+    required double Function(TrendDataPoint) getValue,
+    required double yMax,
+    required String yAxisLabel,
+    required String xAxisLabel,
+    required String Function(double) valueFormat,
+    required Color barColor,
+  }) {
     const chartH  = 150.0;
     const barW    = 28.0;
     const itemW   = 46.0;
     const yLabelW = 42.0;
-
-    final ySteps = List.generate(5, (i) => maxVal * (1 - i / 4));
+    final ySteps  = List.generate(5, (i) => yMax * (1 - i / 4));
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Y-axis
         Column(
           children: [
             SizedBox(
@@ -426,8 +447,9 @@ class _TrendsScreenState extends State<TrendsScreen> {
                 children: [
                   RotatedBox(
                     quarterTurns: 3,
-                    child: const Text('Power (kW)',
-                        style: TextStyle(color: Colors.white38, fontSize: 9)),
+                    child: Text(yAxisLabel,
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 9)),
                   ),
                   const SizedBox(width: 2),
                   SizedBox(
@@ -450,7 +472,6 @@ class _TrendsScreenState extends State<TrendsScreen> {
           ],
         ),
         const SizedBox(width: 4),
-        // Chart
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,14 +490,14 @@ class _TrendsScreenState extends State<TrendsScreen> {
                               5,
                               (_) => Divider(
                                   height: 1,
-                                  color: Colors.white
-                                      .withValues(alpha: 0.07))),
+                                  color: Colors.white.withValues(alpha: 0.07))),
                         ),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: data.map((p) {
-                            final barH = maxVal > 0
-                                ? ((p.value / maxVal) * (chartH - 8))
+                            final val  = getValue(p);
+                            final barH = yMax > 0
+                                ? ((val / yMax) * (chartH - 8))
                                     .clamp(4.0, chartH - 8)
                                 : 4.0;
                             return SizedBox(
@@ -487,12 +508,10 @@ class _TrendsScreenState extends State<TrendsScreen> {
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(
-                                      p.value.toStringAsFixed(1),
-                                      style: const TextStyle(
-                                          color: Colors.white54,
-                                          fontSize: 8),
-                                    ),
+                                    Text(valueFormat(val),
+                                        style: const TextStyle(
+                                            color: Colors.white54,
+                                            fontSize: 8)),
                                     const SizedBox(height: 2),
                                     Container(
                                       width: barW,
@@ -500,9 +519,8 @@ class _TrendsScreenState extends State<TrendsScreen> {
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
                                           colors: [
-                                            AppColors.primary,
-                                            AppColors.primary
-                                                .withValues(alpha: 0.5),
+                                            barColor,
+                                            barColor.withValues(alpha: 0.5),
                                           ],
                                           begin: Alignment.topCenter,
                                           end: Alignment.bottomCenter,
@@ -525,7 +543,6 @@ class _TrendsScreenState extends State<TrendsScreen> {
               ),
               Divider(height: 1, color: Colors.white24),
               const SizedBox(height: 4),
-              // X-axis labels
               SizedBox(
                 height: 14,
                 child: SingleChildScrollView(
@@ -544,10 +561,9 @@ class _TrendsScreenState extends State<TrendsScreen> {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                _selectedPeriod == 'hourly' ? 'Time of Day' : 'Period',
-                style: const TextStyle(color: Colors.white38, fontSize: 9),
-              ),
+              Text(xAxisLabel,
+                  style:
+                      const TextStyle(color: Colors.white38, fontSize: 9)),
             ],
           ),
         ),
@@ -555,218 +571,22 @@ class _TrendsScreenState extends State<TrendsScreen> {
     );
   }
 
-  // ── Sunlight hours bar chart ───────────────────────────────────────────────
+  // ── Sunlight chart (warm gradient bars) ────────────────────────────────────
   Widget _buildSunlightChart(List<TrendDataPoint> data) {
-    const chartH  = 160.0;
-    const barW    = 28.0;
-    const itemW   = 46.0;
-    const yLabelW = 38.0;
-    const yMaxH   = 12.0; // max sunlight hours on Y scale
-
-    // Y steps: 0 → 12 hours
-    final ySteps = List.generate(5, (i) => yMaxH * (1 - i / 4));
-
     final maxSun = data
         .map((p) => p.sunlightHours)
         .reduce((a, b) => a > b ? a : b);
-    final yMax = (maxSun * 1.2).clamp(1.0, 14.0);
+    final yMax   = (maxSun * 1.2).clamp(1.0, 14.0);
 
-    // Summary stats
-    final avgSun = data.map((p) => p.sunlightHours).reduce((a, b) => a + b) /
-        data.length;
-    final maxSunVal =
-        data.map((p) => p.sunlightHours).reduce((a, b) => a > b ? a : b);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Y-axis
-            Column(
-              children: [
-                SizedBox(
-                  height: chartH,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      RotatedBox(
-                        quarterTurns: 3,
-                        child: const Text('Sunlight (hrs)',
-                            style: TextStyle(
-                                color: Colors.white38, fontSize: 9)),
-                      ),
-                      const SizedBox(width: 2),
-                      SizedBox(
-                        width: yLabelW,
-                        height: chartH,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: ySteps
-                              .map((v) => Text('${v.toStringAsFixed(0)}h',
-                                  style: const TextStyle(
-                                      color: Colors.white38, fontSize: 9)))
-                              .toList(),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 22),
-              ],
-            ),
-            const SizedBox(width: 4),
-            // Chart area
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    height: chartH,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: SizedBox(
-                        width: data.length * itemW,
-                        child: Stack(
-                          children: [
-                            // Grid lines
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: List.generate(
-                                  5,
-                                  (_) => Divider(
-                                      height: 1,
-                                      color: Colors.white
-                                          .withValues(alpha: 0.07))),
-                            ),
-                            // Bars — warm gradient (orange→yellow for summer peaks)
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: data.map((p) {
-                                final barH = yMax > 0
-                                    ? ((p.sunlightHours / yMax) *
-                                            (chartH - 8))
-                                        .clamp(4.0, chartH - 8)
-                                    : 4.0;
-                                // Warmer colour for more sun (summer)
-                                final intensity =
-                                    (p.sunlightHours / yMax).clamp(0.0, 1.0);
-                                final barColor = Color.lerp(
-                                    const Color(0xFFFFB300),
-                                    const Color(0xFFFF6D00),
-                                    intensity)!;
-                                return SizedBox(
-                                  width: itemW,
-                                  height: chartH,
-                                  child: Align(
-                                    alignment: Alignment.bottomCenter,
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          '${p.sunlightHours.toStringAsFixed(1)}h',
-                                          style: const TextStyle(
-                                              color: Colors.white54,
-                                              fontSize: 8),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Container(
-                                          width: barW,
-                                          height: barH,
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              colors: [
-                                                barColor,
-                                                barColor.withValues(
-                                                    alpha: 0.5),
-                                              ],
-                                              begin: Alignment.topCenter,
-                                              end: Alignment.bottomCenter,
-                                            ),
-                                            borderRadius:
-                                                const BorderRadius.vertical(
-                                                    top: Radius.circular(6)),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Divider(height: 1, color: Colors.white24),
-                  const SizedBox(height: 4),
-                  // X-axis labels
-                  SizedBox(
-                    height: 14,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: data
-                            .map((p) => SizedBox(
-                                  width: itemW,
-                                  child: Text(p.label,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                          color: Colors.white38,
-                                          fontSize: 9)),
-                                ))
-                            .toList(),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _sunXAxisLabel,
-                    style:
-                        const TextStyle(color: Colors.white38, fontSize: 9),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        // Sunlight summary stats
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.warning.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _StatTile(
-                label: 'Avg / Day',
-                value: '${avgSun.toStringAsFixed(1)} hrs',
-                icon: Icons.wb_sunny_rounded,
-                color: AppColors.warning,
-              ),
-              _StatTile(
-                label: 'Peak Day',
-                value: '${maxSunVal.toStringAsFixed(1)} hrs',
-                icon: Icons.light_mode_rounded,
-                color: const Color(0xFFFF6D00),
-              ),
-              _StatTile(
-                label: 'Total',
-                value:
-                    '${data.map((p) => p.sunlightHours).reduce((a, b) => a + b).toStringAsFixed(1)} hrs',
-                icon: Icons.calendar_today_rounded,
-                color: AppColors.primary,
-              ),
-            ],
-          ),
-        ),
-      ],
+    return _buildBarChart(
+      data: data,
+      getValue: (p) => p.sunlightHours,
+      yMax: yMax,
+      yAxisLabel: 'Sunlight (hrs)',
+      xAxisLabel: _xAxisLabel,
+      valueFormat: (v) => '${v.toStringAsFixed(1)}h',
+      // warm colour — overridden per bar via gradient in the generic builder
+      barColor: AppColors.warning,
     );
   }
 }
@@ -796,8 +616,8 @@ class _StatTile extends StatelessWidget {
                 .copyWith(color: AppColors.textSecondary)),
         const SizedBox(height: 2),
         Text(value,
-            style: AppTextStyles.labelSmall.copyWith(
-                color: color, fontWeight: FontWeight.bold)),
+            style: AppTextStyles.labelSmall
+                .copyWith(color: color, fontWeight: FontWeight.bold)),
       ],
     );
   }
