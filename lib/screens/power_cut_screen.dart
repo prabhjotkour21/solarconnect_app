@@ -349,30 +349,26 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
   }
 
   Widget _buildChart(List<PowerCutEvent> events) {
-    const chartH = 140.0;
-    const yLabelW = 38.0;
-    const barW = 26.0;
-    const barSpacing = 10.0; // padding each side
-    final itemW = barW + barSpacing * 2;
+    const chartH = 160.0;
+    const yLabelW = 36.0;
+    const itemW = 46.0;
 
-    final maxDur = events.map((e) => e.durationMinutes).reduce((a, b) => a > b ? a : b).toDouble();
-    final yMax = ((maxDur / 60).ceil() * 60).toDouble();
-    final ySteps = [0, (yMax * 0.25).round(), (yMax * 0.5).round(), (yMax * 0.75).round(), yMax.round()];
-
-    final maxConsumed = events.map((e) => e.consumedPowerKw).reduce((a, b) => a > b ? a : b);
-    // Solar power is simulated as 60–85% of consumed power per event
+    final maxConsumed = events
+        .map((e) => e.consumedPowerKw)
+        .reduce((a, b) => a > b ? a : b);
     final maxSolar = maxConsumed * 0.85;
-    final maxPower = maxConsumed;
+    // Y-axis based on the higher of the two (consumed)
+    final yMax = (maxConsumed * 1.2);
+    final ySteps = List.generate(5, (i) => yMax * (1 - i / 4));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Legend
         Wrap(
-          spacing: 12,
+          spacing: 14,
           runSpacing: 4,
           children: [
-            _legendDot(AppColors.error, 'Power Cut (min)'),
             _legendLine(Colors.cyanAccent, 'Consuming Power (kW)'),
             _legendDash(Colors.greenAccent, 'Solar Generated (kW)'),
           ],
@@ -381,7 +377,7 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Y-axis label + ticks
+            // Left Y-axis
             Column(
               children: [
                 SizedBox(
@@ -391,7 +387,10 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
                     children: [
                       RotatedBox(
                         quarterTurns: 3,
-                        child: const Text('Duration (min)', style: TextStyle(color: Colors.white38, fontSize: 9)),
+                        child: const Text(
+                          'Power (kW)',
+                          style: TextStyle(color: Colors.white38, fontSize: 9),
+                        ),
                       ),
                       const SizedBox(width: 2),
                       SizedBox(
@@ -400,7 +399,13 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.end,
-                          children: ySteps.reversed.map((v) => Text('${v}m', style: const TextStyle(color: Colors.white38, fontSize: 9))).toList(),
+                          children: ySteps
+                              .map((v) => Text(
+                                    '${v.toStringAsFixed(1)}',
+                                    style: const TextStyle(
+                                        color: Colors.white38, fontSize: 9),
+                                  ))
+                              .toList(),
                         ),
                       ),
                     ],
@@ -410,7 +415,7 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
               ],
             ),
             const SizedBox(width: 4),
-            // Chart area
+            // Chart area — lines only
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,55 +428,35 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
                         width: events.length * itemW,
                         child: Stack(
                           children: [
-                            // Grid lines
+                            // Horizontal grid lines
                             Column(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: List.generate(5, (_) => Divider(height: 1, color: Colors.white.withValues(alpha: 0.07))),
+                              children: List.generate(
+                                5,
+                                (_) => Divider(
+                                  height: 1,
+                                  color: Colors.white.withValues(alpha: 0.07),
+                                ),
+                              ),
                             ),
-                            // Bars
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: events.map((event) {
-                                final barH = (event.durationMinutes / yMax) * chartH;
-                                final color = _getSeverityColor(event.severity);
-                                return SizedBox(
-                                  width: itemW,
-                                  height: chartH,
-                                  child: Align(
-                                    alignment: Alignment.bottomCenter,
-                                    child: Tooltip(
-                                      message: '${_fmtDate(event.date)} ${_fmtTime(event.date)}\nDuration: ${event.durationMinutes} min\nPower: ${event.consumedPowerKw} kW',
-                                      child: Container(
-                                        width: barW,
-                                        height: barH,
-                                        decoration: BoxDecoration(
-                                          color: color.withValues(alpha: 0.8),
-                                          borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                            // Power line overlay — Consuming Power
+                            // Consuming Power line (solid cyan)
                             CustomPaint(
                               size: Size(events.length * itemW, chartH),
                               painter: _LinePainter(
                                 events: events,
-                                maxPower: maxPower,
+                                maxPower: yMax,
                                 chartH: chartH,
                                 itemW: itemW,
                                 color: Colors.cyanAccent,
                                 useSolar: false,
                               ),
                             ),
-                            // Solar generated line overlay
+                            // Solar Generated line (dashed green)
                             CustomPaint(
                               size: Size(events.length * itemW, chartH),
                               painter: _LinePainter(
                                 events: events,
-                                maxPower: maxPower,
+                                maxPower: yMax,
                                 chartH: chartH,
                                 itemW: itemW,
                                 color: Colors.greenAccent,
@@ -498,7 +483,12 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
                               : '${event.date.day}/${event.date.month}';
                           return SizedBox(
                             width: itemW,
-                            child: Text(xLabel, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white38, fontSize: 9)),
+                            child: Text(
+                              xLabel,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  color: Colors.white38, fontSize: 9),
+                            ),
                           );
                         }).toList(),
                       ),
@@ -506,37 +496,12 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _filter == PowerCutFilter.today ? 'Time of Day' : 'Date (DD/MM)',
-                    style: const TextStyle(color: Colors.white38, fontSize: 9),
+                    _filter == PowerCutFilter.today
+                        ? 'Time of Day'
+                        : 'Date (DD/MM)',
+                    style:
+                        const TextStyle(color: Colors.white38, fontSize: 9),
                   ),
-                ],
-              ),
-            ),
-            // Right Y-axis for power
-            Padding(
-              padding: const EdgeInsets.only(left: 4),
-              child: Column(
-                children: [
-                  SizedBox(
-                    width: 40,
-                    height: chartH,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: List.generate(5, (i) {
-                        final cv = maxConsumed * (1 - i / 4);
-                        final sv = maxSolar * (1 - i / 4);
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('${cv.toStringAsFixed(1)}kW', style: const TextStyle(color: Colors.cyanAccent, fontSize: 7)),
-                            Text('${sv.toStringAsFixed(1)}kW', style: const TextStyle(color: Colors.greenAccent, fontSize: 7)),
-                          ],
-                        );
-                      }),
-                    ),
-                  ),
-                  const SizedBox(height: 28),
                 ],
               ),
             ),
@@ -545,15 +510,6 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
       ],
     );
   }
-
-  Widget _legendDot(Color color, String label) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Container(width: 12, height: 12, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3))),
-      const SizedBox(width: 4),
-      Text(label, style: const TextStyle(color: Colors.white54, fontSize: 10)),
-    ],
-  );
 
   Widget _legendLine(Color color, String label) => Row(
     mainAxisSize: MainAxisSize.min,
