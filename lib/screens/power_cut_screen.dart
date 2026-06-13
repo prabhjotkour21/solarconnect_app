@@ -359,17 +359,22 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
     final yMax = ((maxDur / 60).ceil() * 60).toDouble();
     final ySteps = [0, (yMax * 0.25).round(), (yMax * 0.5).round(), (yMax * 0.75).round(), yMax.round()];
 
-    final maxPower = events.map((e) => e.consumedPowerKw).reduce((a, b) => a > b ? a : b);
+    final maxConsumed = events.map((e) => e.consumedPowerKw).reduce((a, b) => a > b ? a : b);
+    // Solar power is simulated as 60–85% of consumed power per event
+    final maxSolar = maxConsumed * 0.85;
+    final maxPower = maxConsumed;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Legend
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 4,
           children: [
             _legendDot(AppColors.error, 'Power Cut (min)'),
-            const SizedBox(width: 16),
             _legendLine(Colors.cyanAccent, 'Consuming Power (kW)'),
+            _legendDash(Colors.greenAccent, 'Solar Generated (kW)'),
           ],
         ),
         const SizedBox(height: 10),
@@ -449,7 +454,7 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
                                 );
                               }).toList(),
                             ),
-                            // Power line overlay
+                            // Power line overlay — Consuming Power
                             CustomPaint(
                               size: Size(events.length * itemW, chartH),
                               painter: _LinePainter(
@@ -458,6 +463,20 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
                                 chartH: chartH,
                                 itemW: itemW,
                                 color: Colors.cyanAccent,
+                                useSolar: false,
+                              ),
+                            ),
+                            // Solar generated line overlay
+                            CustomPaint(
+                              size: Size(events.length * itemW, chartH),
+                              painter: _LinePainter(
+                                events: events,
+                                maxPower: maxPower,
+                                chartH: chartH,
+                                itemW: itemW,
+                                color: Colors.greenAccent,
+                                useSolar: true,
+                                solarMaxPower: maxSolar,
                               ),
                             ),
                           ],
@@ -499,14 +518,21 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
               child: Column(
                 children: [
                   SizedBox(
-                    width: 36,
+                    width: 40,
                     height: chartH,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: List.generate(5, (i) {
-                        final v = maxPower * (1 - i / 4);
-                        return Text('${v.toStringAsFixed(1)}kW', style: const TextStyle(color: Colors.cyanAccent, fontSize: 8));
+                        final cv = maxConsumed * (1 - i / 4);
+                        final sv = maxSolar * (1 - i / 4);
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('${cv.toStringAsFixed(1)}kW', style: const TextStyle(color: Colors.cyanAccent, fontSize: 7)),
+                            Text('${sv.toStringAsFixed(1)}kW', style: const TextStyle(color: Colors.greenAccent, fontSize: 7)),
+                          ],
+                        );
                       }),
                     ),
                   ),
@@ -534,6 +560,20 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
     children: [
       Container(width: 18, height: 2, color: color),
       const SizedBox(width: 4),
+      Text(label, style: const TextStyle(color: Colors.white54, fontSize: 10)),
+    ],
+  );
+
+  Widget _legendDash(Color color, String label) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      ...List.generate(3, (_) => Row(
+        children: [
+          Container(width: 5, height: 2, color: color),
+          const SizedBox(width: 2),
+        ],
+      )),
+      const SizedBox(width: 2),
       Text(label, style: const TextStyle(color: Colors.white54, fontSize: 10)),
     ],
   );
@@ -608,4 +648,109 @@ class _StatCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Line painter for power overlay lines ──────────────────────────────────────
+class _LinePainter extends CustomPainter {
+  final List<PowerCutEvent> events;
+  final double maxPower;
+  final double chartH;
+  final double itemW;
+  final Color color;
+  final bool useSolar;
+  final double solarMaxPower;
+
+  const _LinePainter({
+    required this.events,
+    required this.maxPower,
+    required this.chartH,
+    required this.itemW,
+    required this.color,
+    this.useSolar = false,
+    this.solarMaxPower = 0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (events.isEmpty) return;
+
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    // Dashed pattern for solar line
+    final isDashed = useSolar;
+
+    final path = Path();
+    for (int i = 0; i < events.length; i++) {
+      final rawVal = useSolar
+          ? events[i].consumedPowerKw * 0.72  // simulate solar as ~72% of consumed
+          : events[i].consumedPowerKw;
+      final refMax = useSolar ? (solarMaxPower > 0 ? solarMaxPower : maxPower) : maxPower;
+
+      final x = i * itemW + itemW / 2;
+      final ratio = refMax > 0 ? (rawVal / refMax).clamp(0.0, 1.0) : 0.0;
+      final y = chartH - ratio * chartH;
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+
+    if (isDashed) {
+      _drawDashedPath(canvas, path, paint);
+    } else {
+      canvas.drawPath(path, paint);
+    }
+
+    // Draw dots at each data point
+    final dotPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    for (int i = 0; i < events.length; i++) {
+      final rawVal = useSolar
+          ? events[i].consumedPowerKw * 0.72
+          : events[i].consumedPowerKw;
+      final refMax = useSolar ? (solarMaxPower > 0 ? solarMaxPower : maxPower) : maxPower;
+
+      final x = i * itemW + itemW / 2;
+      final ratio = refMax > 0 ? (rawVal / refMax).clamp(0.0, 1.0) : 0.0;
+      final y = chartH - ratio * chartH;
+
+      canvas.drawCircle(Offset(x, y), 3.0, dotPaint);
+    }
+  }
+
+  void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
+    const dashLength = 6.0;
+    const gapLength = 4.0;
+
+    final metrics = path.computeMetrics();
+    for (final metric in metrics) {
+      double distance = 0.0;
+      bool draw = true;
+      while (distance < metric.length) {
+        final len = draw ? dashLength : gapLength;
+        final end = (distance + len).clamp(0.0, metric.length);
+        if (draw) {
+          canvas.drawPath(metric.extractPath(distance, end), paint);
+        }
+        distance += len;
+        draw = !draw;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LinePainter old) =>
+      old.events != events ||
+      old.maxPower != maxPower ||
+      old.useSolar != useSolar ||
+      old.color != color;
 }
