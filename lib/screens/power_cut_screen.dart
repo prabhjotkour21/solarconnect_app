@@ -195,26 +195,29 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Stats cards
-            Row(
-              children: [
-                Expanded(
-                  child: _StatCard(
-                    icon: Icons.power_off_rounded,
-                    color: AppColors.error,
-                    label: 'Total Power Cut',
-                    value: _formatDuration(_totalDuration),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _StatCard(
+                      icon: Icons.power_off_rounded,
+                      color: AppColors.error,
+                      label: 'Total Power Cut',
+                      value: _formatDuration(_totalDuration),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _StatCard(
-                    icon: Icons.equalizer_rounded,
-                    color: AppColors.warning,
-                    label: 'Avg Duration',
-                    value: '${_avgDuration.toStringAsFixed(0)} min',
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _StatCard(
+                      icon: Icons.equalizer_rounded,
+                      color: AppColors.warning,
+                      label: 'Avg Duration',
+                      value: '${_avgDuration.toStringAsFixed(0)} min',
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 12),
             _StatCard(
