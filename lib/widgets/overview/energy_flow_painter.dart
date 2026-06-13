@@ -1,19 +1,18 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
-/// Draws four animated dashed arms in a + cross:
-///   Solar (top) ─── Inverter (center) ─── Home (right)
-///                        │
-///                      Grid (left) &amp; Battery (bottom)
-///
-/// Each arm uses the color of its respective node.
+enum LineStyle {
+  solidGlow,   // solid line + bright dot travelling along it  (Solar, Battery)
+  dotted,      // small dot-dot dashes                         (Grid)
+  shortDash,   // slightly longer dashes                       (Home)
+}
+
 class EnergyFlowPainter extends CustomPainter {
   final double animValue;
 
   final double canvasW;
   final double canvasH;
 
-  // Center of each node's icon circle (not label)
   final Offset solarCenter;
   final Offset gridCenter;
   final Offset homeCenter;
@@ -51,15 +50,15 @@ class EnergyFlowPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const outerR  = 36.0;   // outer node icon circle radius
-    const centerR = 44.0;   // inverter circle radius
+    const outerR  = 36.0;
+    const centerR = 44.0;
     const gap     = 4.0;
 
     final arms = [
-      _Arm(solarCenter,   inverterCenter, solarColor,   solarActive,   outerR, centerR),
-      _Arm(gridCenter,    inverterCenter, gridColor,    gridActive,    outerR, centerR),
-      _Arm(homeCenter,    inverterCenter, homeColor,    homeActive,    outerR, centerR),
-      _Arm(batteryCenter, inverterCenter, batteryColor, batteryActive, outerR, centerR),
+      _ArmDef(solarCenter,   inverterCenter, solarColor,   solarActive,   outerR, centerR, LineStyle.solidGlow),
+      _ArmDef(gridCenter,    inverterCenter, gridColor,    gridActive,    outerR, centerR, LineStyle.dotted),
+      _ArmDef(homeCenter,    inverterCenter, homeColor,    homeActive,    outerR, centerR, LineStyle.shortDash),
+      _ArmDef(batteryCenter, inverterCenter, batteryColor, batteryActive, outerR, centerR, LineStyle.solidGlow),
     ];
 
     for (final arm in arms) {
@@ -70,32 +69,99 @@ class EnergyFlowPainter extends CustomPainter {
       if (length < 1) continue;
       final unit = dir / length;
 
-      // Start just outside the outer node, end just outside inverter
-      final start = arm.from + unit * (arm.fromR + gap);
-      final end   = arm.to   - unit * (arm.toR   + gap);
+      final start   = arm.from + unit * (arm.fromR + gap);
+      final end     = arm.to   - unit * (arm.toR   + gap);
       final lineLen = (end - start).distance;
       if (lineLen < 1) continue;
 
-      final paint = Paint()
-        ..color       = arm.color.withOpacity(0.9)
-        ..strokeWidth = 2.5
-        ..style       = PaintingStyle.stroke
-        ..strokeCap   = StrokeCap.round;
-
-      const dashLen = 9.0;
-      const gapLen  = 5.0;
-      const period  = dashLen + gapLen;
-      final offset  = animValue * period;
-
-      double d = -offset;
-      while (d < lineLen) {
-        final ds = max(0.0, d);
-        final de = min(lineLen, d + dashLen);
-        if (ds < de) {
-          canvas.drawLine(start + unit * ds, start + unit * de, paint);
-        }
-        d += period;
+      switch (arm.style) {
+        case LineStyle.solidGlow:
+          _drawSolidGlow(canvas, start, end, unit, lineLen, arm.color);
+          break;
+        case LineStyle.dotted:
+          _drawDotted(canvas, start, unit, lineLen, arm.color);
+          break;
+        case LineStyle.shortDash:
+          _drawShortDash(canvas, start, unit, lineLen, arm.color);
+          break;
       }
+    }
+  }
+
+  /// Solid dim line + a bright glowing dot that travels from node → inverter
+  void _drawSolidGlow(Canvas canvas, Offset start, Offset end,
+      Offset unit, double lineLen, Color color) {
+    // Dim base line
+    canvas.drawLine(
+      start, end,
+      Paint()
+        ..color       = color.withOpacity(0.25)
+        ..strokeWidth = 2.0
+        ..style       = PaintingStyle.stroke
+        ..strokeCap   = StrokeCap.round,
+    );
+
+    // Travelling bright dot
+    final dotPos = start + unit * (animValue * lineLen);
+    // Outer glow
+    canvas.drawCircle(
+      dotPos, 6.0,
+      Paint()..color = color.withOpacity(0.25)..style = PaintingStyle.fill,
+    );
+    // Inner bright dot
+    canvas.drawCircle(
+      dotPos, 3.5,
+      Paint()..color = color.withOpacity(0.95)..style = PaintingStyle.fill,
+    );
+  }
+
+  /// Small dot–dot dashes (like the Grid line in the reference)
+  void _drawDotted(Canvas canvas, Offset start, Offset unit,
+      double lineLen, Color color) {
+    final paint = Paint()
+      ..color       = color.withOpacity(0.8)
+      ..strokeWidth = 2.5
+      ..style       = PaintingStyle.stroke
+      ..strokeCap   = StrokeCap.round;
+
+    const dotLen = 2.0;
+    const gapLen = 5.0;
+    const period = dotLen + gapLen;
+    final offset = animValue * period;
+
+    double d = -offset;
+    while (d < lineLen) {
+      final ds = max(0.0, d);
+      final de = min(lineLen, d + dotLen);
+      if (ds < de) {
+        canvas.drawLine(start + unit * ds, start + unit * de, paint);
+      }
+      d += period;
+    }
+  }
+
+  /// Short solid dashes (like the Home line in the reference)
+  void _drawShortDash(Canvas canvas, Offset start, Offset unit,
+      double lineLen, Color color) {
+    final paint = Paint()
+      ..color       = color.withOpacity(0.85)
+      ..strokeWidth = 2.5
+      ..style       = PaintingStyle.stroke
+      ..strokeCap   = StrokeCap.round;
+
+    const dashLen = 8.0;
+    const gapLen  = 5.0;
+    const period  = dashLen + gapLen;
+    final offset  = animValue * period;
+
+    double d = -offset;
+    while (d < lineLen) {
+      final ds = max(0.0, d);
+      final de = min(lineLen, d + dashLen);
+      if (ds < de) {
+        canvas.drawLine(start + unit * ds, start + unit * de, paint);
+      }
+      d += period;
     }
   }
 
@@ -108,12 +174,14 @@ class EnergyFlowPainter extends CustomPainter {
       old.batteryActive != batteryActive;
 }
 
-class _Arm {
-  final Offset from;
-  final Offset to;
-  final Color  color;
-  final bool   active;
-  final double fromR;
-  final double toR;
-  const _Arm(this.from, this.to, this.color, this.active, this.fromR, this.toR);
+class _ArmDef {
+  final Offset    from;
+  final Offset    to;
+  final Color     color;
+  final bool      active;
+  final double    fromR;
+  final double    toR;
+  final LineStyle style;
+  const _ArmDef(this.from, this.to, this.color, this.active,
+      this.fromR, this.toR, this.style);
 }

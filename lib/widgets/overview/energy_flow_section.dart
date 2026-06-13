@@ -6,12 +6,29 @@ import '../../models/energy_reading.dart';
 import 'energy_flow_painter.dart';
 import 'energy_node.dart';
 
-// Node colors — single source of truth so painter & nodes always match
-const _solarColor    = AppColors.warning;        // amber
-const _gridColor     = AppColors.info;            // blue
-const _homeColor     = Color(0xFF7C4DFF);         // purple
-const _batteryColor  = AppColors.success;         // green
-const _inverterColor = AppColors.primary;         // teal
+const _solarColor = AppColors.warning;
+const _gridColor = AppColors.info;
+const _homeColor = Color(0xFF7C4DFF);
+const _batteryColor = AppColors.success;
+const _inverterColor = AppColors.primary;
+
+// Circle sizes
+const _nodeR = 36.0; // outer node radius  (diameter 72)
+const _centerR = 44.0; // inverter radius     (diameter 88)
+const _labelH = 34.0; // height of 2-line label block
+
+// The gap (in px) between any outer circle edge and the inverter circle edge
+// — same on all 4 arms so spacing looks uniform
+const _armGap = 60.0;
+
+// Derived vertical sizes
+const _nodeD = _nodeR * 2;
+const _centerD = _centerR * 2;
+
+// Total canvas height:
+// [label above solar] + [solar circle] + [armGap] + [inverter circle] + [armGap] + [battery circle] + [label below battery]
+const _totalH =
+    _labelH + _nodeD + _armGap + _centerD + _armGap + _nodeD + _labelH;
 
 class EnergyFlowSection extends StatefulWidget {
   final EnergyReading reading;
@@ -29,8 +46,9 @@ class _EnergyFlowSectionState extends State<EnergyFlowSection>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(seconds: 2))
-      ..repeat();
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
   }
 
   @override
@@ -47,13 +65,6 @@ class _EnergyFlowSectionState extends State<EnergyFlowSection>
   Widget build(BuildContext context) {
     final r = widget.reading;
 
-    // Node layout constants
-    const nodeSize    = 72.0;   // outer node diameter
-    const centerSize  = 88.0;   // center inverter diameter
-    const nodeLabelH  = 36.0;   // approx height of label+value text below icon
-    const totalH      = nodeSize + nodeLabelH + 20 + centerSize + 20 + nodeSize + nodeLabelH;
-    // totalH ≈ top-node + gap + center + gap + bottom-node
-
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMD),
       padding: const EdgeInsets.all(AppConstants.paddingMD),
@@ -65,7 +76,7 @@ class _EnergyFlowSectionState extends State<EnergyFlowSection>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row
+          // Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -79,14 +90,20 @@ class _EnergyFlowSectionState extends State<EnergyFlowSection>
                 child: Row(
                   children: [
                     Container(
-                      width: 6, height: 6,
+                      width: 6,
+                      height: 6,
                       decoration: const BoxDecoration(
-                          color: AppColors.success, shape: BoxShape.circle),
+                        color: AppColors.success,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                     const SizedBox(width: 4),
-                    Text('Live',
-                        style: AppTextStyles.labelSmall
-                            .copyWith(color: AppColors.success)),
+                    Text(
+                      'Live',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.success,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -94,123 +111,131 @@ class _EnergyFlowSectionState extends State<EnergyFlowSection>
           ),
           const SizedBox(height: AppConstants.paddingMD),
 
-          // ── Cross / plus layout ──────────────────────────────────────────
+          // Cross diagram
           AnimatedBuilder(
             animation: _ctrl,
-            builder: (_, __) {
-              return SizedBox(
-                height: totalH,
-                child: LayoutBuilder(
-                  builder: (ctx, constraints) {
-                    final w = constraints.maxWidth;
-                    final h = totalH;
+            builder: (_, __) => SizedBox(
+              height: _totalH,
+              child: LayoutBuilder(
+                builder: (_, constraints) {
+                  final w = constraints.maxWidth;
+                  final cx = w / 2;
 
-                    // Center of the whole cross area
-                    final cx = w / 2;
-                    final cy = h / 2;
+                  // ── Vertical centers ──
+                  // Solar:   label is ABOVE circle → circle top = _labelH
+                  final solarCY = _labelH + _nodeR;
+                  // Inverter sits exactly _armGap below solar circle edge
+                  final invCY = solarCY + _nodeR + _armGap + _centerR;
+                  // Battery: exactly _armGap below inverter circle edge
+                  final batteryCY = invCY + _centerR + _armGap + _nodeR;
 
-                    // Node centers (icon center, not including label text)
-                    final solarCenter   = Offset(cx,                     nodeSize / 2);
-                    final batteryCenter = Offset(cx,                     h - nodeSize / 2);
-                    final gridCenter    = Offset(nodeSize / 2,           cy);
-                    final homeCenter    = Offset(w - nodeSize / 2,       cy);
-                    final inverterCenter = Offset(cx, cy);
+                  // ── Horizontal centers ──
+                  // Grid/Home are vertically aligned with inverter center.
+                  // Their horizontal position: inverter edge + _armGap + nodeR
+                  final gridCX = cx - _centerR - _armGap - _nodeR;
+                  final homeCX = cx + _centerR + _armGap + _nodeR;
 
-                    return Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        // ── Animated lines (painted behind nodes) ──
-                        Positioned.fill(
-                          child: CustomPaint(
-                            painter: EnergyFlowPainter(
-                              animValue:     _ctrl.value,
-                              canvasW:       w,
-                              canvasH:       h,
-                              solarCenter:   solarCenter,
-                              gridCenter:    gridCenter,
-                              homeCenter:    homeCenter,
-                              batteryCenter: batteryCenter,
-                              inverterCenter: inverterCenter,
-                              solarColor:    _solarColor,
-                              gridColor:     _gridColor,
-                              homeColor:     _homeColor,
-                              batteryColor:  _batteryColor,
-                              solarActive:   r.solarPowerW > 0,
-                              gridActive:    r.gridPowerW.abs() > 0,
-                              homeActive:    r.consumptionPowerW > 0,
-                              batteryActive: r.batteryPowerW.abs() > 0,
-                            ),
+                  final solarCenter = Offset(cx, solarCY);
+                  final inverterCenter = Offset(cx, invCY);
+                  final batteryCenter = Offset(cx, batteryCY);
+                  final gridCenter = Offset(gridCX, invCY);
+                  final homeCenter = Offset(homeCX, invCY);
+
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // Lines — drawn behind nodes
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: EnergyFlowPainter(
+                            animValue: _ctrl.value,
+                            canvasW: w,
+                            canvasH: _totalH,
+                            solarCenter: solarCenter,
+                            gridCenter: gridCenter,
+                            homeCenter: homeCenter,
+                            batteryCenter: batteryCenter,
+                            inverterCenter: inverterCenter,
+                            solarColor: _solarColor,
+                            gridColor: _gridColor,
+                            homeColor: _homeColor,
+                            batteryColor: _batteryColor,
+                            solarActive: r.solarPowerW > 0,
+                            gridActive: r.gridPowerW.abs() > 0,
+                            homeActive: r.consumptionPowerW > 0,
+                            batteryActive: r.batteryPowerW.abs() > 0,
                           ),
                         ),
+                      ),
 
-                        // ── Solar — top center ──
-                        Positioned(
-                          top: 0,
-                          left: cx - nodeSize / 2,
-                          child: EnergyNode(
-                            icon: Icons.wb_sunny_rounded,
-                            label: 'Solar Power',
-                            value: _fmtW(r.solarPowerW),
-                            color: _solarColor,
-                          ),
+                      // Solar — label ABOVE circle
+                      Positioned(
+                        top: 0,
+                        left: cx - _nodeR,
+                        child: EnergyNode(
+                          icon: Icons.wb_sunny_rounded,
+                          label: 'Solar Power',
+                          value: _fmtW(r.solarPowerW),
+                          color: _solarColor,
+                          labelOnTop: true,
                         ),
+                      ),
 
-                        // ── Grid — left center ──
-                        Positioned(
-                          top: cy - nodeSize / 2,
-                          left: 0,
-                          child: EnergyNode(
-                            icon: Icons.cell_tower_rounded,
-                            label: 'Grid',
-                            value: '${r.gridPowerW.abs().toStringAsFixed(1)} V',
-                            color: _gridColor,
-                          ),
+                      // Grid — left, circle center at (gridCX, invCY)
+                      Positioned(
+                        top: invCY - _nodeR,
+                        left: gridCX - _nodeR,
+                        child: EnergyNode(
+                          icon: Icons.cell_tower_rounded,
+                          label: 'Grid',
+                          value: '${r.gridPowerW.abs().toStringAsFixed(1)} V',
+                          color: _gridColor,
                         ),
+                      ),
 
-                        // ── Home — right center ──
-                        Positioned(
-                          top: cy - nodeSize / 2,
-                          right: 0,
-                          child: EnergyNode(
-                            icon: Icons.home_rounded,
-                            label: 'Home',
-                            value: _fmtW(r.consumptionPowerW),
-                            color: _homeColor,
-                          ),
+                      // Home — right, circle center at (homeCX, invCY)
+                      Positioned(
+                        top: invCY - _nodeR,
+                        left: homeCX - _nodeR,
+                        child: EnergyNode(
+                          icon: Icons.home_rounded,
+                          label: 'Home',
+                          value: _fmtW(r.consumptionPowerW),
+                          color: _homeColor,
                         ),
+                      ),
 
-                        // ── Battery — bottom center ──
-                        Positioned(
-                          bottom: 0,
-                          left: cx - nodeSize / 2,
-                          child: EnergyNode(
-                            icon: r.batteryCharging
-                                ? Icons.battery_charging_full_rounded
-                                : Icons.battery_std_rounded,
-                            label: r.batteryCharging ? 'Charging' : 'Battery',
-                            value: '${r.batteryPercent.toStringAsFixed(0)}%',
-                            color: _batteryColor,
-                          ),
+                      // Battery — label BELOW circle
+                      Positioned(
+                        top: batteryCY - _nodeR,
+                        left: cx - _nodeR,
+                        child: EnergyNode(
+                          icon: r.batteryCharging
+                              ? Icons.battery_charging_full_rounded
+                              : Icons.battery_std_rounded,
+                          label: r.batteryCharging ? 'Charging' : 'Battery',
+                          value: '${r.batteryPercent.toStringAsFixed(0)}%',
+                          color: _batteryColor,
                         ),
+                      ),
 
-                        // ── Inverter — dead center ──
-                        Positioned(
-                          top: cy - centerSize / 2,
-                          left: cx - centerSize / 2,
-                          child: EnergyNode(
-                            icon: Icons.sync_alt_rounded,
-                            label: 'Inverter',
-                            value: _fmtW(r.solarPowerW),
-                            color: _inverterColor,
-                            isCenter: true,
-                          ),
+                      // Inverter — dead center
+                      Positioned(
+                        top: invCY - _centerR,
+                        left: cx - _centerR,
+                        child: EnergyNode(
+                          icon: Icons.sync_alt_rounded,
+                          label: 'Inverter',
+                          value: _fmtW(r.solarPowerW),
+                          color: _inverterColor,
+                          isCenter: true,
                         ),
-                      ],
-                    );
-                  },
-                ),
-              );
-            },
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
           ),
         ],
       ),
