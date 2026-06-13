@@ -24,6 +24,10 @@ class EnergyFlowPainter extends CustomPainter {
   final Color homeColor;
   final Color batteryColor;
 
+  // Responsive radii passed from section
+  final double outerR;
+  final double centerR;
+
   final bool solarActive;
   final bool gridActive;
   final bool homeActive;
@@ -42,6 +46,8 @@ class EnergyFlowPainter extends CustomPainter {
     required this.gridColor,
     required this.homeColor,
     required this.batteryColor,
+    this.outerR  = 36.0,
+    this.centerR = 44.0,
     this.solarActive   = true,
     this.gridActive    = true,
     this.homeActive    = true,
@@ -50,15 +56,13 @@ class EnergyFlowPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const outerR  = 36.0;
-    const centerR = 44.0;
-    const gap     = 4.0;
+    const gap = 4.0;
 
     final arms = [
-      _ArmDef(solarCenter,   inverterCenter, solarColor,   solarActive,   outerR, centerR, LineStyle.solidGlow),
-      _ArmDef(gridCenter,    inverterCenter, gridColor,    gridActive,    outerR, centerR, LineStyle.dotted),
-      _ArmDef(homeCenter,    inverterCenter, homeColor,    homeActive,    outerR, centerR, LineStyle.shortDash),
-      _ArmDef(batteryCenter, inverterCenter, batteryColor, batteryActive, outerR, centerR, LineStyle.solidGlow),
+      _ArmDef(solarCenter,   inverterCenter, solarColor,   solarActive,   outerR,  centerR, LineStyle.solidGlow),
+      _ArmDef(gridCenter,    inverterCenter, gridColor,    gridActive,    outerR,  centerR, LineStyle.dotted),
+      _ArmDef(homeCenter,    inverterCenter, homeColor,    homeActive,    outerR,  centerR, LineStyle.shortDash),
+      _ArmDef(batteryCenter, inverterCenter, batteryColor, batteryActive, outerR,  centerR, LineStyle.solidGlow),
     ];
 
     for (final arm in arms) {
