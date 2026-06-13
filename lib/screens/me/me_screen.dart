@@ -221,7 +221,7 @@ class _ProfileHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Alex Johnson', style: AppTextStyles.headingSmall),
-                Text('alex@example.com',
+                Text('+91 98765 43210',
                     style: AppTextStyles.bodySmall
                         .copyWith(color: cs.onSurfaceVariant, fontSize: 12)),
                 const SizedBox(height: 4),

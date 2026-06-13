@@ -20,38 +20,53 @@ class EnergyNode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = isCenter ? 88.0 : 72.0;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color.withValues(alpha: 0.12),
-            border: Border.all(color: color.withValues(alpha: 0.6), width: isCenter ? 2.5 : 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: color.withValues(alpha: 0.25),
-                blurRadius: isCenter ? 20 : 12,
-                spreadRadius: isCenter ? 4 : 2,
+    final circleSize = isCenter ? 88.0 : 72.0;
+    return SizedBox(
+      width: circleSize,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: circleSize,
+            height: circleSize,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color.withValues(alpha: isCenter ? 0.25 : 0.1),
+              border: Border.all(
+                color: color.withValues(alpha: isCenter ? 0.9 : 0.7),
+                width: isCenter ? 2.5 : 2.0,
               ),
-            ],
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: isCenter ? 0.35 : 0.2),
+                  blurRadius: isCenter ? 20 : 10,
+                  spreadRadius: isCenter ? 4 : 2,
+                ),
+              ],
+            ),
+            child: Icon(icon, color: color, size: isCenter ? 36 : 28),
           ),
-          child: Icon(icon, color: color, size: isCenter ? 36 : 28),
-        ),
-        const SizedBox(height: 6),
-        Text(label, style: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary)),
-        Text(
-          value,
-          style: AppTextStyles.bodySmall.copyWith(
-            color: color,
-            fontWeight: FontWeight.w600,
-            fontSize: 11,
+          const SizedBox(height: 5),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.textSecondary,
+              fontSize: 11,
+            ),
           ),
-        ),
-      ],
+          Text(
+            value,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
