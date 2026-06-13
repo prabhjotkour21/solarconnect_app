@@ -9,6 +9,7 @@ import '../../widgets/overview/energy_flow_section.dart';
 import '../../widgets/overview/energy_stats_section.dart';
 import '../../widgets/overview/battery_card.dart';
 import '../../widgets/overview/environmental_benefits_card.dart';
+import '../../widgets/overview/economic_benefits_card.dart';
 
 class OverviewScreen extends StatefulWidget {
   const OverviewScreen({super.key});
@@ -99,6 +100,14 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 EnergyStatsSection(reading: _reading),
                 const SizedBox(height: AppConstants.paddingMD),
                 BatteryCard(reading: _reading),
+                const SizedBox(height: AppConstants.paddingMD),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMD),
+                  child: EconomicBenefitsCard(
+                    solarTodayKwh: _reading.solarTodayKwh,
+                    solarTotalKwh: _reading.solarTodayKwh * 287,
+                  ),
+                ),
                 const SizedBox(height: AppConstants.paddingMD),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMD),
