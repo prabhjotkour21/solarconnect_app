@@ -1,0 +1,477 @@
+================================================================================
+         SOLARCONNECT APP — COMPLETE FEATURES LIST (Backend Reference)
+================================================================================
+App Name    : SolarConnect
+Version     : 1.0.0
+Platform    : Flutter (Android / iOS)
+Purpose     : Solar energy system monitoring & management app
+================================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. SPLASH SCREEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- App launch screen (3 second delay, then auto-navigate to Home)
+- Shows app logo, name, and tagline
+
+BACKEND NEEDED:
+  - None (static screen)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. OVERVIEW SCREEN  (Main Dashboard — Tab 1)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Real-time solar power display (kW) — refreshes every 5 seconds
+- Energy Flow Diagram: Solar → Home / Battery / Grid (animated arrows)
+- Energy Stats Section:
+    - Solar Power (W)
+    - Home Consumption (W)
+    - Battery Power (W) — charging or discharging
+    - Grid Power (W) — importing or exporting
+- Battery Card:
+    - Battery percentage (0–100%)
+    - Charging / Discharging status
+    - Battery power in Watts
+- Daily Energy Totals (kWh):
+    - Solar Today
+    - Consumption Today
+    - Grid Import Today
+    - Grid Export Today
+- Economic Benefits Card:
+    - Savings today (₹)
+    - Total savings (₹) — lifetime
+- Environmental Benefits Card:
+    - CO2 saved (kg)
+    - Trees equivalent
+    - Coal avoided
+- Accumulated Generation Card:
+    - Total kWh generated (lifetime)
+    - Total CO2 saved (kg)
+    - Total money saved (₹)
+- Greeting message with time of day (Good Morning / Afternoon / Evening)
+
+BACKEND NEEDED:
+  - GET /api/energy/realtime       → current solar, consumption, battery, grid power
+  - GET /api/energy/today          → daily totals (kWh)
+  - GET /api/energy/accumulated    → lifetime totals
+  - WebSocket (or polling)         → live data refresh every 5 seconds
+  DATA MODEL (EnergyReading):
+    timestamp, solarPowerW, consumptionPowerW, batteryPowerW, gridPowerW,
+    batteryPercent, batteryCharging, solarTodayKwh, consumptionTodayKwh,
+    gridImportTodayKwh, gridExportTodayKwh
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. EXPLORE SCREEN  (Articles & Tips — Tab 2)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Browse articles related to solar energy
+- Category filter chips:
+    All | Tips & Tricks | Finance | Maintenance | Education
+- Article Card: title, category, image, short description, read time
+- Article Detail Screen: full article content
+
+BACKEND NEEDED:
+  - GET /api/articles              → list of articles (with category filter)
+  - GET /api/articles/:id          → single article detail
+  DATA MODEL (ExploreArticle):
+    id, title, category, imageUrl, summary, content, readTimeMinutes, publishedDate
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. ME SCREEN  (Profile & Account — Tab 3)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Profile Header:
+    - User name (e.g. "Alex Johnson")
+    - Phone number
+    - Account type badge (e.g. "Premium")
+    - Edit profile button
+- System Info Card:
+    - System Size (kWp)
+    - Total Revenue (₹)
+    - Battery Capacity (kWh)
+    - Online / Offline status indicator
+- Section: Analytics & Monitoring (links to Trends, Insights, Power Cut, Savings)
+- Section: System Setup (links to Setup Inverter, Wi-Fi Configuration)
+- Section: Help & Support (links to Notifications, FAQ, Contact Support, User Guide)
+- Section: Settings (Appearance, Language, Privacy)
+- Section: Account (Share App, Rate Us, Sign Out)
+
+BACKEND NEEDED:
+  - GET  /api/user/profile         → name, phone, plan, avatar
+  - PUT  /api/user/profile         → update profile
+  - GET  /api/system/info          → system size, battery capacity, status
+  - POST /api/auth/logout          → sign out
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. TRENDS SCREEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Two charts side by side / stacked:
+    (a) Solar Generation Chart (bar chart, kW)
+    (b) Sunlight Hours Chart (bar chart, hours)
+- Filter options:
+    Today (hourly) | Weekly (daily) | Monthly | Yearly | Custom Date Range
+- Stats shown per chart:
+    Total, Max, Average
+- Detailed data table (scrollable list of each data point)
+- Custom date range picker
+- Reset to Today button
+
+BACKEND NEEDED:
+  - GET /api/trends?period=today|weekly|monthly|yearly   → trend data points
+  - GET /api/trends?from=YYYY-MM-DD&to=YYYY-MM-DD        → custom range
+  DATA MODEL (TrendDataPoint):
+    label, value (kW), sunlightHours
+  Aggregated stats: totalGeneration, maxGeneration, avgGeneration
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. INSIGHTS SCREEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Self-Powered Percentage (e.g. 58%) — how much electricity from solar
+- Weekly Comparison: per-day self-powered % and generation (kWh) with progress bars
+- Key Metrics Cards:
+    - Peak Usage (kW + time)
+    - Peak Generation (kW + time)
+    - Battery Cycles (last 7 days)
+    - Grid Export (kWh yesterday)
+
+BACKEND NEEDED:
+  - GET /api/insights/summary      → selfPoweredPercent, weeklyData[], keyMetrics
+  DATA MODEL:
+    selfPoweredPercent,
+    weeklyData: [{day, percentage, generationKwh}],
+    keyMetrics: {peakUsageKw, peakUsageTime, peakGenKw, peakGenTime,
+                 batteryCycles, gridExportKwh}
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. SAVINGS SCREEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Period filter: Today | Yesterday | Weekly | Monthly | Custom Date Range
+- Main Savings Card: total savings for selected period (₹)
+- Savings Breakdown:
+    - Amount for selected period
+    - Total period savings
+- Investment Details:
+    - ROI % (Return on Investment)
+    - Investment Amount (user-editable via dialog, ₹)
+    - Break Even Period (e.g. "3 years 0 months")
+- Savings Trend Chart (bar chart):
+    - Filter: Today | Weekly | Monthly | All Time | Custom Range
+- Reset to Today button
+
+BACKEND NEEDED:
+  - GET /api/savings?period=today|yesterday|weekly|monthly   → savings data
+  - GET /api/savings?from=YYYY-MM-DD&to=YYYY-MM-DD           → custom range
+  - GET /api/savings/trend?filter=today|weekly|monthly|alltime
+  - PUT /api/user/investment       → save user's investment amount
+  DATA MODEL (SavingsData):
+    totalSavings, dailyAverage, lastPeriodSavings,
+    roi, investmentAmount, roiMonths
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. POWER CUT SCREEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Summary Stats:
+    - Total Power Cut Duration (hours + minutes)
+    - Average Duration per event (minutes)
+    - Total Number of Events
+- Filter: Today | Weekly | Monthly | All Time | Custom Date Range
+- Dual Line Chart:
+    - Consuming Power (kW) — solid line
+    - Solar Generated (kW) — dashed line
+- Power Cut Events List:
+    - Date and time of each event
+    - Duration (hours + minutes)
+    - Severity badge: LOW / MEDIUM / HIGH (color-coded)
+
+BACKEND NEEDED:
+  - GET /api/powercuts?period=today|weekly|monthly|alltime   → list of events
+  - GET /api/powercuts?from=YYYY-MM-DD&to=YYYY-MM-DD         → custom range
+  DATA MODEL (PowerCutEvent):
+    id, date (DateTime), durationMinutes, severity (low|medium|high),
+    consumedPowerKw, solarPowerKw
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. NOTIFICATIONS SCREEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- List of notifications (most recent first)
+- Notification types:
+    - alert  (🚨 red)  — system warnings
+    - saving (💰 green) — savings updates
+    - update (ℹ️ blue)  — system/generation updates
+    - info   (📢)       — general info
+- Unread indicator (blue dot) per notification
+- "Mark all read" button
+- Empty state screen when no notifications
+
+BACKEND NEEDED:
+  - GET  /api/notifications        → list of notifications
+  - PUT  /api/notifications/read-all  → mark all as read
+  - PUT  /api/notifications/:id/read  → mark one as read
+  - POST /api/notifications (push) → send from backend (FCM/APNs)
+  DATA MODEL (NotificationItem):
+    id, title, description, timestamp, type (alert|saving|update|info), isRead
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. INVERTER SETUP SCREEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Serial number input field (minimum 8 characters)
+- QR Code scanner button (to scan inverter serial)
+- Submit button (disabled until serial is valid)
+- Validation dialog: shows "Serial No is Invalid" if not found
+
+BACKEND NEEDED:
+  - POST /api/inverter/validate    → validate serial number
+  - POST /api/inverter/register    → register inverter to user account
+  - GET  /api/inverter/info        → get paired inverter details
+  DATA MODEL (InverterData):
+    serialNumber, modelName, firmwareVersion, isPaired, pairedDate
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+11. WI-FI CONFIGURATION SCREEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Info banner: "Make sure inverter is in pairing mode"
+- List of available Wi-Fi networks:
+    - Network name
+    - Signal strength %
+    - Lock icon (if password protected)
+- Password input field with show/hide toggle
+- Connect button
+
+BACKEND NEEDED:
+  - GET  /api/wifi/scan            → list of nearby networks (from inverter)
+  - POST /api/wifi/connect         → send SSID + password to inverter
+  DATA MODEL:
+    ssid, signalStrength, isLocked, status (connected|connecting|failed)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+12. SETTINGS SCREEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Notifications:
+    - Push Notifications toggle (on/off)
+    - Daily Summary toggle (on/off) — report at 6 PM
+- Display:
+    - Dark Mode / Light Mode toggle
+- Language:
+    - Select: English | Spanish | French | German | Hindi
+- Data & Storage:
+    - Cache Size display + Clear Cache option
+    - Export Data as CSV (last 12 months)
+- Privacy & Security:
+    - Privacy Policy (view)
+    - Terms of Service (view)
+    - Change Password
+- About:
+    - App Version (v1.0.0)
+    - Build Number
+
+BACKEND NEEDED:
+  - GET  /api/user/settings        → fetch user preferences
+  - PUT  /api/user/settings        → save preferences (notifications, language, etc.)
+  - POST /api/auth/change-password → change password (current + new)
+  - GET  /api/user/export-data     → generate & return CSV export
+  DATA MODEL (UserSettings):
+    pushNotificationsEnabled, dailySummaryEnabled, language, darkMode
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+13. HELP & SUPPORT SCREEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Contact Options:
+    - Email Support (support@solarconnect.app)
+    - Phone Support (+1 555-123-4567)
+    - Live Chat (9 AM – 6 PM EST)
+- FAQ Section (expandable items):
+    - 6 pre-defined questions & answers
+- Quick Links:
+    - User Guide
+    - Report a Bug (text form)
+    - Feature Request (text form)
+    - Send Feedback (star rating + comment)
+- App version info
+
+BACKEND NEEDED:
+  - GET  /api/support/faq          → list of FAQ items
+  - POST /api/support/bug-report   → submit bug report
+  - POST /api/support/feature      → submit feature request
+  - POST /api/support/feedback     → submit star rating + comment
+  - POST /api/support/chat         → initiate live chat session
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+14. AUTHENTICATION  (Not yet built — needed for backend)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Sign In screen (phone/email + password)
+- Sign Up / Registration screen
+- Forgot Password / OTP flow
+- Sign Out (exists in Me screen)
+
+BACKEND NEEDED:
+  - POST /api/auth/login           → returns JWT token
+  - POST /api/auth/register        → create new user account
+  - POST /api/auth/forgot-password → send OTP
+  - POST /api/auth/verify-otp      → verify OTP
+  - POST /api/auth/reset-password  → set new password after OTP
+  - POST /api/auth/logout          → invalidate token
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+15. ENVIRONMENTAL BENEFITS  (Sub-feature of Overview)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Calculated from solar generation:
+    - CO2 saved (kg) — factor: 0.233 kg per kWh
+    - Trees equivalent
+    - Coal avoided (kg)
+
+BACKEND NEEDED:
+  - Can be calculated server-side from kWh data
+  - Or returned as part of GET /api/energy/accumulated
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+16. SHARE APP & RATE US  (Sub-features of Me Screen)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Share App: opens native share dialog with app link
+- Rate Us: opens app store rating or in-app rating dialog
+
+BACKEND NEEDED:
+  - None (handled by device OS / app store)
+
+
+================================================================================
+                         SUMMARY — ALL API ENDPOINTS
+================================================================================
+
+AUTH:
+  POST /api/auth/login
+  POST /api/auth/register
+  POST /api/auth/logout
+  POST /api/auth/forgot-password
+  POST /api/auth/verify-otp
+  POST /api/auth/reset-password
+  POST /api/auth/change-password
+
+USER:
+  GET  /api/user/profile
+  PUT  /api/user/profile
+  GET  /api/user/settings
+  PUT  /api/user/settings
+  PUT  /api/user/investment
+  GET  /api/user/export-data
+
+ENERGY / REAL-TIME:
+  GET  /api/energy/realtime
+  GET  /api/energy/today
+  GET  /api/energy/accumulated
+  WS   /ws/energy/live  (WebSocket for 5-second refresh)
+
+TRENDS:
+  GET  /api/trends?period=today|weekly|monthly|yearly
+  GET  /api/trends?from=YYYY-MM-DD&to=YYYY-MM-DD
+
+INSIGHTS:
+  GET  /api/insights/summary
+
+SAVINGS:
+  GET  /api/savings?period=today|yesterday|weekly|monthly
+  GET  /api/savings?from=YYYY-MM-DD&to=YYYY-MM-DD
+  GET  /api/savings/trend?filter=today|weekly|monthly|alltime
+
+POWER CUT:
+  GET  /api/powercuts?period=today|weekly|monthly|alltime
+  GET  /api/powercuts?from=YYYY-MM-DD&to=YYYY-MM-DD
+
+NOTIFICATIONS:
+  GET  /api/notifications
+  PUT  /api/notifications/read-all
+  PUT  /api/notifications/:id/read
+
+INVERTER:
+  POST /api/inverter/validate
+  POST /api/inverter/register
+  GET  /api/inverter/info
+
+WI-FI:
+  GET  /api/wifi/scan
+  POST /api/wifi/connect
+
+ARTICLES:
+  GET  /api/articles
+  GET  /api/articles/:id
+
+SUPPORT:
+  GET  /api/support/faq
+  POST /api/support/bug-report
+  POST /api/support/feature
+  POST /api/support/feedback
+  POST /api/support/chat
+
+SYSTEM:
+  GET  /api/system/info
+
+
+================================================================================
+                            DATA MODELS SUMMARY
+================================================================================
+
+EnergyReading:
+  timestamp, solarPowerW, consumptionPowerW, batteryPowerW, gridPowerW,
+  batteryPercent, batteryCharging, solarTodayKwh, consumptionTodayKwh,
+  gridImportTodayKwh, gridExportTodayKwh
+
+TrendDataPoint:
+  label, value (kW), sunlightHours
+
+InsightsSummary:
+  selfPoweredPercent,
+  weeklyData: [{day, percentage, generationKwh}],
+  keyMetrics: {peakUsageKw, peakUsageTime, peakGenKw, peakGenTime,
+               batteryCycles, gridExportKwh}
+
+SavingsData:
+  totalSavings, dailyAverage, lastPeriodSavings, roi, investmentAmount, roiMonths
+
+PowerCutEvent:
+  id, date, durationMinutes, severity (low|medium|high), consumedPowerKw, solarPowerKw
+
+NotificationItem:
+  id, title, description, timestamp, type (alert|saving|update|info), isRead
+
+InverterData:
+  serialNumber, modelName, firmwareVersion, isPaired, pairedDate
+
+ExploreArticle:
+  id, title, category, imageUrl, summary, content, readTimeMinutes, publishedDate
+
+UserProfile:
+  id, name, phone, email, plan (free|premium), avatarUrl
+
+UserSettings:
+  pushNotificationsEnabled, dailySummaryEnabled, language, darkMode, investmentAmount
+
+SystemInfo:
+  systemSizeKwp, batteryCapacityKwh, totalRevenue, status (online|offline),
+  inverterSerialNumber, installedDate
+
+================================================================================
+                          RECOMMENDED TECH STACK (Backend)
+================================================================================
+
+Language   : Node.js (Express) / Python (FastAPI) / Java (Spring Boot)
+Database   : PostgreSQL (main data) + Redis (caching real-time data)
+Auth       : JWT (access token) + Refresh Token
+Real-time  : WebSocket (Socket.io or native WS) for live energy data
+Push Notif : Firebase Cloud Messaging (FCM) for Android + APNs for iOS
+File Export: Server-side CSV generation
+Hosting    : AWS / GCP / Azure / Railway / Render
+
+================================================================================
+                                  END OF FILE
+================================================================================
