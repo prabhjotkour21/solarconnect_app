@@ -33,3 +33,11 @@ Today's Task
 -Research backend service options (AWS, GCP, etc.) and prepare a comparison with reasons for selecting the most suitable platform.(2hr)
 -Set up the backend development environment and initial project configuration.(2hr)
 -Explore and understand NestJS core concepts, project architecture, modules, controllers, services, dependency injection, and request lifecycle.(2hr)
+
+Date 15/06/26
+WorkDone
+-Researched and compared multiple global and Indian cloud platforms to evaluate suitable infrastructure options for the SolarConnect application.(3hr)
+-Created a detailed cloud provider comparison sheet covering features, scalability, customer support, advantages, and limitations.(2hr)
+-Compiled and organized SolarConnect-related keywords, technical parameters, and one-line definitions for application documentation and development reference.(2.5hr)
+-Structured solar, battery, grid, inverter, and energy monitoring terminology into a centralized reference sheet for the project.(1hr)
+-Compared NestJS and Express.js to evaluate their pros, cons, and suitability for selecting the best backend framework for SolarConnect.(1hr)
