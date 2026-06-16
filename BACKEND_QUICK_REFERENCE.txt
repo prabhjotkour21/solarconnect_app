@@ -401,3 +401,54 @@ Questions to address:
 ═══════════════════════════════════════════════════════════════════════════════
 For detailed information, refer to BACKEND_DEVELOPMENT_ROADMAP.txt
 ═══════════════════════════════════════════════════════════════════════════════
+
+
+
+
+
+1. Requirement Analysis & API Planning - 2 Days
+
+2. NestJS Project Setup & Architecture - 2 Days
+
+3. Database Design & PostgreSQL Setup - 2 Days
+
+4. WebSocket Gateway Setup - 1 Day
+
+5. ESP32 Device Communication Module - 4 Days
+
+6. User & Profile Management Module - 2 Days
+
+7. Energy Monitoring Module - 4 Days
+
+8. Dashboard (Overview) APIs - 3 Days
+
+9. Trends Module - 3 Days
+
+10. Insights Module - 2 Days
+
+11. Savings Module - 3 Days
+
+12. Power Cut Module - 2 Days
+
+13. Notifications Module - 3 Days
+
+14. Inverter Management Module - 3 Days
+
+15. WiFi Configuration Module - 2 Days
+
+16. Articles Module - 1 Day
+
+17. Settings Module - 2 Days
+
+18. Help & Support Module - 2 Days
+
+19. CSV Export Module - 1 Day
+
+20. API Documentation (Swagger) - 1 Day
+
+21. Testing & Bug Fixing - 5 Days
+
+22. Deployment & Server Setup - 2 Days
+
+
+
