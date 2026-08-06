@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
+import 'screens/login_screen.dart';
 import 'screens/shell/shell_screen.dart';
 import 'screens/trends_screen.dart';
 import 'screens/insights_screen.dart';
@@ -34,6 +35,7 @@ class SolarConnectApp extends StatelessWidget {
         home: const SplashScreen(),
         routes: {
           '/home': (context) => const ShellScreen(),
+          '/login': (context) => const LoginScreen(),
           '/trends': (context) => const TrendsScreen(),
           '/insights': (context) => const InsightsScreen(),
           '/power_cut': (context) => const PowerCutScreen(),
