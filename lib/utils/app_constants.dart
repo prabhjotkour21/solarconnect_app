@@ -6,6 +6,12 @@ abstract class AppConstants {
   static const String appName = 'SolarConnect';
   static const String appVersion = '1.0.0';
 
+  // ── API configuration ────────────────────────────────────────────────────
+  static const String apiBaseUrl = 'http://localhost:3000/api/v1';
+  static const String authTokenKey = 'auth_token';
+  static const String refreshTokenKey = 'refresh_token';
+  static const String userDataKey = 'user_data';
+
   // ── Animation durations ────────────────────────────────────────────────────
   static const Duration animFast = Duration(milliseconds: 200);
   static const Duration animNormal = Duration(milliseconds: 350);
