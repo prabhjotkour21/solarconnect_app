@@ -5,10 +5,24 @@ class InverterService {
 
   final ApiService _apiService;
 
-  Future<Map<String, dynamic>> pairInverter({required String serialNumber, required String token}) async {
+  Future<Map<String, dynamic>> pairInverter({
+    required String serialNumber,
+    required String model,
+    required String brand,
+    String? location,
+    String? firmwareVersion,
+    required String token,
+  }) async {
+    final body = {
+      'serialNumber': serialNumber,
+      'model': model,
+      'brand': brand,
+      if (location != null && location.isNotEmpty) 'location': location,
+      if (firmwareVersion != null && firmwareVersion.isNotEmpty) 'firmwareVersion': firmwareVersion,
+    };
     return _apiService.post(
       '/inverters/pair',
-      body: {'serialNumber': serialNumber},
+      body: body,
       token: token,
     );
   }
@@ -35,5 +49,17 @@ class InverterService {
 
   Future<Map<String, dynamic>> getInverterStatus(String id, String token) async {
     return _apiService.get('/inverters/$id/status', token: token);
+  }
+
+  Future<Map<String, dynamic>> getSavingsHistory(
+    String id,
+    String token, {
+    Map<String, String>? queryParams,
+  }) async {
+    return _apiService.get(
+      '/inverters/$id/savings/history',
+      queryParams: queryParams,
+      token: token,
+    );
   }
 }
