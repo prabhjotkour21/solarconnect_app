@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../services/service_locator.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -20,6 +22,12 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   bool _isRegistering = false;
   String? _message;
+  // Provisioning state
+  String? _deviceId;
+  String? _deviceToken;
+  final TextEditingController _wifiSsidController = TextEditingController();
+  final TextEditingController _wifiPasswordController = TextEditingController();
+  bool _isProvisioning = false;
 
   Future<String?> _getToken() async {
     return ServiceLocator.instance.authService.getStoredToken();
@@ -58,6 +66,9 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
         token: token,
       );
       final deviceToken = response['deviceToken']?.toString();
+      final deviceId = response['device']?['id']?.toString();
+      _deviceId = deviceId;
+      _deviceToken = deviceToken;
       setState(() {
         _message = 'Device registered successfully.';
       });
@@ -88,6 +99,63 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
     } finally {
       setState(() {
         _isRegistering = false;
+      });
+    }
+  }
+
+  Future<void> _provisionToDevice() async {
+    if (_deviceToken == null || _deviceId == null) {
+      AppDialogs.showErrorSnackBar(context, 'Register device first to get device token.');
+      return;
+    }
+
+    final ssid = _wifiSsidController.text.trim();
+    final password = _wifiPasswordController.text.trim();
+
+    if (ssid.isEmpty || password.isEmpty) {
+      AppDialogs.showErrorSnackBar(context, 'Wi‑Fi SSID and password are required to provision.');
+      return;
+    }
+
+    setState(() {
+      _isProvisioning = true;
+    });
+
+    try {
+      final uri = Uri.parse('http://192.168.4.1/provision');
+      final body = jsonEncode({
+        'deviceId': _deviceId,
+        'deviceToken': _deviceToken,
+        'ssid': ssid,
+        'password': password,
+        'backendUrl': AppConstants.apiBaseUrl.replaceFirst('/api/v1', ''),
+      });
+
+      final resp = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      ).timeout(const Duration(seconds: 8));
+
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        AppDialogs.showSuccessSnackBar(context, 'Provisioning data sent to ESP32.');
+        setState(() {
+          _message = 'Provisioning request sent. Device will connect to Wi‑Fi.';
+        });
+      } else {
+        AppDialogs.showErrorSnackBar(context, 'Provision failed: ${resp.statusCode}');
+        setState(() {
+          _message = 'Provisioning failed: ${resp.statusCode}';
+        });
+      }
+    } catch (e) {
+      AppDialogs.showErrorSnackBar(context, 'Provisioning error: ${e.toString()}');
+      setState(() {
+        _message = 'Provisioning error: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        _isProvisioning = false;
       });
     }
   }
@@ -125,6 +193,36 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Text('Register Device'),
             ),
+            const SizedBox(height: AppConstants.paddingSM),
+            if (_deviceToken != null) ...[
+              const SizedBox(height: AppConstants.paddingMD),
+              Container(
+                padding: const EdgeInsets.all(AppConstants.paddingMD),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceDark,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Provision ESP32 (SoftAP)', style: AppTextStyles.headingSmall),
+                    const SizedBox(height: AppConstants.paddingSM),
+                    Text('1) Put your ESP32 into provisioning mode (press the button).\n2) Connect your phone to the ESP32 Wi‑Fi AP (SSID: SC_ESP32_<serial>).\n3) Enter your home Wi‑Fi credentials below and tap "Send to Device".',
+                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+                    const SizedBox(height: AppConstants.paddingSM),
+                    TextField(controller: _wifiSsidController, decoration: InputDecoration(labelText: 'Home Wi‑Fi SSID', filled: true, fillColor: AppColors.surfaceDark)),
+                    const SizedBox(height: AppConstants.paddingSM),
+                    TextField(controller: _wifiPasswordController, decoration: InputDecoration(labelText: 'Home Wi‑Fi Password', filled: true, fillColor: AppColors.surfaceDark), obscureText: true),
+                    const SizedBox(height: AppConstants.paddingSM),
+                    ElevatedButton(
+                      onPressed: _isProvisioning ? null : _provisionToDevice,
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                      child: _isProvisioning ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Send to Device'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (_message != null) ...[
               const SizedBox(height: AppConstants.paddingSM),
               Text(_message!, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
