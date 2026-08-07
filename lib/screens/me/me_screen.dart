@@ -13,6 +13,7 @@ import '../savings_screen.dart';
 import '../notifications_screen.dart';
 import '../inverter_setup_screen.dart';
 import '../wifi_config_screen.dart';
+import '../device_register_screen.dart';
 
 class MeScreen extends StatelessWidget {
   const MeScreen({super.key});
@@ -58,6 +59,10 @@ class MeScreen extends StatelessWidget {
       case 'Wi-Fi Configuration':
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => const WifiConfigScreen()));
+        break;
+      case 'Register ESP32':
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const DeviceRegisterScreen()));
         break;
       case 'Share App':
         AppDialogs.showShareDialog(context);
@@ -129,6 +134,8 @@ class MeScreen extends StatelessWidget {
                         items: const [
                           _MenuItem(Icons.router_rounded, 'Setup Inverter',
                               'Configure your inverter'),
+                          _MenuItem(Icons.memory_rounded, 'Register ESP32',
+                              'Register your device with backend'),
                           _MenuItem(Icons.wifi_rounded, 'Wi-Fi Configuration',
                               'Connect to network'),
                         ],
