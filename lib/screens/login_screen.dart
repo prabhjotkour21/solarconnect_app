@@ -56,7 +56,12 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString();
+        final message = e.toString();
+        if (message.contains('SocketException') || message.contains('Connection refused')) {
+          _errorMessage = 'Unable to connect to backend. Make sure the server is running and your emulator can reach localhost.';
+        } else {
+          _errorMessage = message;
+        }
       });
     } finally {
       if (mounted) {
@@ -101,14 +106,37 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 24),
                     TextFormField(
                       controller: _emailController,
-                      decoration: const InputDecoration(labelText: 'Email'),
+                      style: const TextStyle(color: Colors.black87),
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        hintText: 'Enter your email',
+                        labelStyle: TextStyle(color: AppColors.textSecondary),
+                        hintStyle: TextStyle(color: AppColors.textSecondary),
+                        filled: true,
+                        fillColor: Color(0xFFF4F6F9),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                        ),
+                      ),
                       validator: (value) => value == null || value.isEmpty ? 'Enter email' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _passwordController,
                       obscureText: true,
-                      decoration: const InputDecoration(labelText: 'Password'),
+                      style: const TextStyle(color: Colors.black87),
+                      decoration: const InputDecoration(
+                        labelText: 'Password',
+                        hintText: 'Enter your password',
+                        labelStyle: TextStyle(color: AppColors.textSecondary),
+                        hintStyle: TextStyle(color: AppColors.textSecondary),
+                        filled: true,
+                        fillColor: Color(0xFFF4F6F9),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                        ),
+                      ),
                       validator: (value) => value == null || value.isEmpty ? 'Enter password' : null,
                     ),
                     const SizedBox(height: 20),
