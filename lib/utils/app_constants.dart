@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+
 /// App-wide constants.
 ///
 /// Rule: if a value appears more than once, it belongs here.
@@ -7,7 +9,16 @@ abstract class AppConstants {
   static const String appVersion = '1.0.0';
 
   // ── API configuration ────────────────────────────────────────────────────
-  static const String apiBaseUrl = 'http://localhost:3000/api/v1';
+  static String get apiBaseUrl {
+    if (kIsWeb) {
+      return 'http://localhost:3000/api/v1';
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:3000/api/v1';
+    }
+    return 'http://localhost:3000/api/v1';
+  }
+
   static const String authTokenKey = 'auth_token';
   static const String refreshTokenKey = 'refresh_token';
   static const String userDataKey = 'user_data';
