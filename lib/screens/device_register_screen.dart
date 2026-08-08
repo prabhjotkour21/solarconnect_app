@@ -127,7 +127,13 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
     try {
       // Step 1: Test connection to ESP32
       final testUri = Uri.parse('http://192.168.4.1/');
-      final testResp = await http.get(testUri).timeout(const Duration(seconds: 5)).catchError((_) => null);
+      http.Response? testResp;
+      
+      try {
+        testResp = await http.get(testUri).timeout(const Duration(seconds: 5));
+      } catch (e) {
+        testResp = null;
+      }
       
       if (testResp == null) {
         setState(() {
