@@ -155,7 +155,7 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
 
       final resp = await http.post(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json','Accept': 'application/json',},
         body: body,
       ).timeout(const Duration(seconds: 60));
 
