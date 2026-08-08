@@ -145,12 +145,18 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
       setState(() => _message = 'Sending WiFi credentials to ESP32...');
       
       final uri = Uri.parse('http://192.168.4.1/provision');
+      
+      // Parse backend URL to extract host:port only
+      String backendUrl = AppConstants.apiBaseUrl.replaceFirst('/api/v1', '');
+      // Remove http:// or https:// if present
+      backendUrl = backendUrl.replaceFirst(RegExp(r'https?://'), '');
+      
       final body = jsonEncode({
         'deviceId': _deviceId,
         'deviceToken': _deviceToken,
         'ssid': ssid,
         'password': password,
-        'backendUrl': AppConstants.apiBaseUrl.replaceFirst('/api/v1', ''),
+        'backendUrl': backendUrl,  // Now just "host:port"
       });
 
       final resp = await http.post(
