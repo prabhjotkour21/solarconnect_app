@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../services/service_locator.dart';
@@ -119,9 +121,29 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
 
     setState(() {
       _isProvisioning = true;
+      _message = 'Checking connection to ESP32...';
     });
 
     try {
+      // Step 1: Test connection to ESP32
+      final testUri = Uri.parse('http://192.168.4.1/');
+      final testResp = await http.get(testUri).timeout(const Duration(seconds: 5)).catchError((_) => null);
+      
+      if (testResp == null) {
+        setState(() {
+          _message = '❌ ESP32 not responding at 192.168.4.1\n\n'
+              '✓ Make sure:\n'
+              '1. ESP32 is ON and in SoftAP mode\n'
+              '2. Phone is connected to ESP32 WiFi\n'
+              '3. Try: Settings > WiFi > find SC_ESP32_* and connect';
+        });
+        AppDialogs.showErrorSnackBar(context, 'Cannot reach ESP32. Check connection steps above.');
+        return;
+      }
+
+      // Step 2: Send provisioning data
+      setState(() => _message = 'Sending WiFi credentials to ESP32...');
+      
       final uri = Uri.parse('http://192.168.4.1/provision');
       final body = jsonEncode({
         'deviceId': _deviceId,
@@ -140,18 +162,40 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         AppDialogs.showSuccessSnackBar(context, 'Provisioning data sent to ESP32.');
         setState(() {
-          _message = 'Provisioning request sent. Device will connect to Wi‑Fi.';
+          _message = '✅ Success! Device will connect to home WiFi now.\n'
+              'Check backend in 30-60 seconds for device online status.';
         });
       } else {
         AppDialogs.showErrorSnackBar(context, 'Provision failed: ${resp.statusCode}');
         setState(() {
-          _message = 'Provisioning failed: ${resp.statusCode}';
+          _message = '❌ ESP32 rejected request (Status: ${resp.statusCode})\n'
+              'Response: ${resp.body}';
         });
       }
+    } on TimeoutException catch (_) {
+      AppDialogs.showErrorSnackBar(context, 'ESP32 took too long to respond');
+      setState(() {
+        _message = '⏱️ Timeout: ESP32 not responding\n\n'
+            '✓ Troubleshooting:\n'
+            '1. Restart ESP32\n'
+            '2. Check WiFi signal strength\n'
+            '3. Verify provisioning mode is active\n'
+            '4. Try again in 30 seconds';
+      });
+    } on SocketException catch (e) {
+      AppDialogs.showErrorSnackBar(context, 'Network error: ${e.message}');
+      setState(() {
+        _message = '🌐 Network unreachable: ${e.message}\n\n'
+            '✓ Check:\n'
+            '1. Phone WiFi is ON\n'
+            '2. Connected to ESP32 SoftAP\n'
+            '3. Not on VPN/proxy';
+      });
     } catch (e) {
       AppDialogs.showErrorSnackBar(context, 'Provisioning error: ${e.toString()}');
       setState(() {
-        _message = 'Provisioning error: ${e.toString()}';
+        _message = '❌ Error: ${e.toString()}\n\n'
+            'Check logs and try again.';
       });
     } finally {
       setState(() {
