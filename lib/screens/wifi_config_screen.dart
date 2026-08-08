@@ -33,7 +33,7 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
@@ -47,7 +47,7 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
                   Row(
                     children: [
                       Icon(Icons.info_outline_rounded,
-                          color: AppColors.primary),
+                          color: AppColors.primary, size: 18),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -59,7 +59,7 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Text(
                     'Estimated time: 2-3 minutes',
                     style: AppTextStyles.labelSmall.copyWith(
@@ -69,13 +69,13 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
             Text(
               'Select Network',
               style: AppTextStyles.headingMedium,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
 
             // Network list
             ...[
@@ -170,14 +170,14 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
               );
             }).toList(),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
             if (_selectedNetwork != null) ...[
               Text(
                 'Enter Password',
                 style: AppTextStyles.headingMedium,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
 
               TextField(
                 controller: _passwordController,
@@ -219,7 +219,7 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               SizedBox(
                 width: double.infinity,
@@ -249,6 +249,7 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
             ],
           ],
         ),
