@@ -135,7 +135,7 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
         uri,
         headers: {'Content-Type': 'application/json'},
         body: body,
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 60));
 
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         AppDialogs.showSuccessSnackBar(context, 'Provisioning data sent to ESP32.');
