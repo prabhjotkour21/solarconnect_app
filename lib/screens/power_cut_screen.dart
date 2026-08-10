@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/power_cut_data.dart';
+import '../services/service_locator.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
@@ -15,8 +16,12 @@ class PowerCutScreen extends StatefulWidget {
 class _PowerCutScreenState extends State<PowerCutScreen> {
   PowerCutFilter _filter = PowerCutFilter.weekly;
   DateTimeRange? _customRange;
+  bool _isLoading = true;
+  bool _isRefreshing = false;
+  String? _errorMessage;
+  String? _inverterId;
 
-  final List<PowerCutEvent> _allEvents = PowerCutData.demo().events;
+  final List<PowerCutEvent> _allEvents = [];
 
   List<PowerCutEvent> get _filteredEvents {
     final now = DateTime.now();
@@ -49,14 +54,107 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
 
   String get _filterLabel {
     switch (_filter) {
-      case PowerCutFilter.today: return 'Today';
-      case PowerCutFilter.weekly: return 'Weekly';
-      case PowerCutFilter.monthly: return 'Monthly';
-      case PowerCutFilter.allTime: return 'All Time';
+      case PowerCutFilter.today:
+        return 'Today';
+      case PowerCutFilter.weekly:
+        return 'Weekly';
+      case PowerCutFilter.monthly:
+        return 'Monthly';
+      case PowerCutFilter.allTime:
+        return 'All Time';
       case PowerCutFilter.custom:
         return _customRange != null
             ? '${_fmt(_customRange!.start)} - ${_fmt(_customRange!.end)}'
             : 'Custom';
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPowerCutHistory();
+  }
+
+  Future<void> _loadPowerCutHistory({bool refreshing = false}) async {
+    if (refreshing) {
+      setState(() {
+        _isRefreshing = true;
+      });
+    } else {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
+
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      setState(() {
+        _errorMessage = 'Authentication required. Please login again.';
+        _isLoading = false;
+        _isRefreshing = false;
+      });
+      return;
+    }
+
+    try {
+      final inverterResponse = await ServiceLocator.instance.inverterService.getInverters(token);
+      final rawInverters = inverterResponse['data'] ?? inverterResponse;
+      String? inverterId;
+
+      if (rawInverters is List && rawInverters.isNotEmpty) {
+        final firstInverter = rawInverters.first;
+        if (firstInverter is Map<String, dynamic>) {
+          inverterId = firstInverter['_id']?.toString() ?? firstInverter['id']?.toString();
+        } else if (firstInverter is Map) {
+          inverterId = firstInverter['_id']?.toString() ?? firstInverter['id']?.toString();
+        }
+      }
+
+      if (inverterId == null || inverterId.isEmpty) {
+        setState(() {
+          _errorMessage = 'No paired inverter found. Please pair an inverter first.';
+          _isLoading = false;
+          _isRefreshing = false;
+        });
+        return;
+      }
+
+      final response = await ServiceLocator.instance.powerCutService.getPowerCuts(
+        inverterId,
+        token,
+        queryParams: {'limit': 100},
+      );
+
+      final rawData = response['data'];
+      final events = <PowerCutEvent>[];
+      if (rawData is List) {
+        for (final item in rawData) {
+          if (item is Map<String, dynamic>) {
+            events.add(PowerCutEvent.fromJson(item));
+          } else if (item is Map) {
+            events.add(PowerCutEvent.fromJson(Map<String, dynamic>.from(item)));
+          }
+        }
+      }
+
+      setState(() {
+        _inverterId = inverterId;
+        _allEvents
+          ..clear()
+          ..addAll(events);
+        _errorMessage = null;
+      });
+    } catch (e) {
+      setState(() {
+        _allEvents.clear();
+        _errorMessage = e.toString();
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+        _isRefreshing = false;
+      });
     }
   }
 
@@ -75,7 +173,8 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
           children: [
             Center(
               child: Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
                   color: Colors.white24,
                   borderRadius: BorderRadius.circular(2),
@@ -189,165 +288,196 @@ class _PowerCutScreenState extends State<PowerCutScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Stats cards
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.power_off_rounded,
-                      color: AppColors.error,
-                      label: 'Total Power Cut',
-                      value: _formatDuration(_totalDuration),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.equalizer_rounded,
-                      color: AppColors.warning,
-                      label: 'Avg Duration',
-                      value: '${_avgDuration.toStringAsFixed(0)} min',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            _StatCard(
-              icon: Icons.info_outline_rounded,
-              color: AppColors.primary,
-              label: 'Total Events',
-              value: '${events.length} cuts',
-              fullWidth: true,
-            ),
-
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Power Cut History', style: AppTextStyles.headingMedium),
-                GestureDetector(
-                  onTap: _showFilterSheet,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
-                    ),
-                    child: Row(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.tune_rounded, color: AppColors.primary, size: 16),
-                        const SizedBox(width: 6),
-                        Text(_filterLabel, style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600)),
+                        Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                        const SizedBox(height: 16),
+                        Text(
+                          _errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: () => _loadPowerCutHistory(),
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: () => _loadPowerCutHistory(refreshing: true),
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_inverterId != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Text(
+                              'Inverter: $_inverterId',
+                              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                            ),
+                          ),
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: _StatCard(
+                                  icon: Icons.power_off_rounded,
+                                  color: AppColors.error,
+                                  label: 'Total Power Cut',
+                                  value: _formatDuration(_totalDuration),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _StatCard(
+                                  icon: Icons.equalizer_rounded,
+                                  color: AppColors.warning,
+                                  label: 'Avg Duration',
+                                  value: '${_avgDuration.toStringAsFixed(0)} min',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _StatCard(
+                          icon: Icons.info_outline_rounded,
+                          color: AppColors.primary,
+                          label: 'Total Events',
+                          value: '${events.length} cuts',
+                          fullWidth: true,
+                        ),
+
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Power Cut History', style: AppTextStyles.headingMedium),
+                            GestureDetector(
+                              onTap: _showFilterSheet,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.tune_rounded, color: AppColors.primary, size: 16),
+                                    const SizedBox(width: 6),
+                                    Text(_filterLabel, style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        Container(
+                          padding: const EdgeInsets.fromLTRB(8, 12, 12, 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceDark,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: events.isEmpty
+                              ? SizedBox(
+                                  height: 150,
+                                  child: Center(
+                                    child: Text(
+                                      'No data for selected period',
+                                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                                    ),
+                                  ),
+                                )
+                              : _buildChart(events),
+                        ),
+
+                        const SizedBox(height: 24),
+                        Text('Detailed Events', style: AppTextStyles.headingMedium),
+                        const SizedBox(height: 12),
+
+                        if (events.isEmpty)
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 24),
+                              child: Text(
+                                'No power cut events found',
+                                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                              ),
+                            ),
+                          ),
+
+                        ...events.map((event) {
+                          final color = _getSeverityColor(event.severity);
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceDark,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border(left: BorderSide(color: color, width: 4)),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: color.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(Icons.power_off_rounded,
+                                      color: color, size: 20),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${_fmtDate(event.date)}  •  ${_fmtTime(event.date)}',
+                                        style: AppTextStyles.labelLarge.copyWith(color: AppColors.textPrimary),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Duration: ${_formatDuration(event.durationMinutes)}',
+                                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Chip(
+                                  label: Text(
+                                    event.severity.toUpperCase(),
+                                    style: AppTextStyles.labelSmall.copyWith(color: AppColors.textPrimary),
+                                  ),
+                                  backgroundColor: color.withValues(alpha: 0.2),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
                       ],
                     ),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Chart
-            Container(
-              padding: const EdgeInsets.fromLTRB(8, 12, 12, 8),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceDark,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: events.isEmpty
-                  ? SizedBox(
-                      height: 150,
-                      child: Center(
-                        child: Text(
-                          'No data for selected period',
-                          style: AppTextStyles.bodySmall
-                              .copyWith(color: AppColors.textSecondary),
-                        ),
-                      ),
-                    )
-                  : _buildChart(events),
-            ),
-
-            const SizedBox(height: 24),
-            Text('Detailed Events', style: AppTextStyles.headingMedium),
-            const SizedBox(height: 12),
-
-            if (events.isEmpty)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Text(
-                    'No power cut events found',
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.textSecondary),
-                  ),
-                ),
-              ),
-
-            ...events.map((event) {
-              final color = _getSeverityColor(event.severity);
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceDark,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border(left: BorderSide(color: color, width: 4)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(Icons.power_off_rounded,
-                          color: color, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${_fmtDate(event.date)}  •  ${_fmtTime(event.date)}',
-                            style: AppTextStyles.labelLarge
-                                .copyWith(color: AppColors.textPrimary),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Duration: ${_formatDuration(event.durationMinutes)}',
-                            style: AppTextStyles.bodySmall
-                                .copyWith(color: AppColors.textSecondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Chip(
-                      label: Text(
-                        event.severity.toUpperCase(),
-                        style: AppTextStyles.labelSmall
-                            .copyWith(color: AppColors.textPrimary),
-                      ),
-                      backgroundColor: color.withValues(alpha: 0.2),
-                    ),
-                  ],
-                ),
-              );
-            }),
-          ],
-        ),
-      ),
     );
   }
 
