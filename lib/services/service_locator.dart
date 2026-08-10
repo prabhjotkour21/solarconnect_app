@@ -4,7 +4,10 @@ import 'dashboard_service.dart';
 import 'device_service.dart';
 import 'energy_service.dart';
 import 'inverter_service.dart';
+import 'notification_service.dart';
+import 'power_cut_service.dart';
 import 'user_profile_service.dart';
+import 'wifi_config_service.dart';
 
 class ServiceLocator {
   ServiceLocator._();
@@ -17,5 +20,8 @@ class ServiceLocator {
   late final EnergyService energyService = EnergyService(apiService);
   late final InverterService inverterService = InverterService(apiService);
   late final DashboardService dashboardService = DashboardService(apiService);
+  late final NotificationService notificationService = NotificationService(apiService);
+  late final PowerCutService powerCutService = PowerCutService(apiService);
   late final UserProfileService userProfileService = UserProfileService(apiService);
+  late final WifiConfigService wifiConfigService = WifiConfigService(apiService);
 }
