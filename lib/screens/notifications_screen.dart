@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../models/notification_item.dart';
+import '../../services/service_locator.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
+import '../../utils/app_dialogs.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -11,12 +13,145 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  late List<NotificationItem> _notifications;
+  final List<NotificationItem> _notifications = [];
+  bool _isLoading = true;
+  bool _isRefreshing = false;
+  String? _errorMessage;
+  int _unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _notifications = NotificationItem.demoList();
+    _loadNotifications();
+  }
+
+  Future<void> _loadNotifications({bool refreshing = false}) async {
+    if (refreshing) {
+      setState(() {
+        _isRefreshing = true;
+      });
+    } else {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
+
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      setState(() {
+        _errorMessage = 'Authentication required. Please login again.';
+        _isLoading = false;
+        _isRefreshing = false;
+      });
+      return;
+    }
+
+    try {
+      final response = await ServiceLocator.instance.notificationService.getNotifications(
+        token,
+        queryParams: {'limit': 50},
+      );
+
+      final rawData = response['data'];
+      final notifications = <NotificationItem>[];
+      if (rawData is List) {
+        for (final item in rawData) {
+          if (item is Map<String, dynamic>) {
+            notifications.add(NotificationItem.fromJson(item));
+          } else if (item is Map) {
+            notifications.add(NotificationItem.fromJson(Map<String, dynamic>.from(item)));
+          }
+        }
+      }
+
+      final unreadCount = await ServiceLocator.instance.notificationService.getUnreadCount(token);
+
+      setState(() {
+        _notifications
+          ..clear()
+          ..addAll(notifications);
+        _unreadCount = unreadCount;
+        _errorMessage = null;
+      });
+    } catch (e) {
+      setState(() {
+        _notifications.clear();
+        _errorMessage = e.toString();
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+        _isRefreshing = false;
+      });
+    }
+  }
+
+  Future<void> _refreshNotifications() async {
+    await _loadNotifications(refreshing: true);
+  }
+
+  Future<void> _markAllRead() async {
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      AppDialogs.showErrorSnackBar(context, 'Authentication required. Please login again.');
+      return;
+    }
+
+    try {
+      await ServiceLocator.instance.notificationService.markAllAsRead(token);
+      await _loadNotifications();
+      AppDialogs.showSuccessSnackBar(context, 'All notifications marked as read.');
+    } catch (e) {
+      AppDialogs.showErrorSnackBar(context, e.toString());
+    }
+  }
+
+  Future<void> _markAsRead(NotificationItem item) async {
+    if (item.isRead) {
+      return;
+    }
+
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      AppDialogs.showErrorSnackBar(context, 'Authentication required. Please login again.');
+      return;
+    }
+
+    try {
+      await ServiceLocator.instance.notificationService.markAsRead(item.id, token);
+      await _loadNotifications();
+    } catch (e) {
+      AppDialogs.showErrorSnackBar(context, e.toString());
+    }
+  }
+
+  Future<void> _deleteNotification(NotificationItem item) async {
+    final confirmed = await AppDialogs.showConfirmDialog(
+      context,
+      title: 'Delete Notification',
+      message: 'Are you sure you want to remove this notification?',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      AppDialogs.showErrorSnackBar(context, 'Authentication required. Please login again.');
+      return;
+    }
+
+    try {
+      await ServiceLocator.instance.notificationService.deleteNotification(item.id, token);
+      await _loadNotifications();
+      AppDialogs.showSuccessSnackBar(context, 'Notification deleted.');
+    } catch (e) {
+      AppDialogs.showErrorSnackBar(context, e.toString());
+    }
   }
 
   String _getNotificationIcon(String type) {
@@ -58,131 +193,167 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          if (_notifications.isNotEmpty)
+          if (!_isLoading && _notifications.isNotEmpty)
             TextButton(
-              onPressed: () {
-                setState(() {
-                  for (var n in _notifications) {
-                    n.isRead = true;
-                  }
-                });
-              },
+              onPressed: _unreadCount > 0 ? _markAllRead : null,
               child: Text(
                 'Mark all read',
                 style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.primary,
+                  color: _unreadCount > 0 ? AppColors.primary : AppColors.textSecondary,
                 ),
               ),
             ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshNotifications,
+          ),
         ],
       ),
-      body: _notifications.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.notifications_off_outlined,
-                    size: 64,
-                    color: AppColors.textSecondary,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No notifications',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: _notifications.length,
-              itemBuilder: (context, index) {
-                final notification = _notifications[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceDark,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border(
-                      left: BorderSide(
-                        color: _getNotificationColor(notification.type),
-                        width: 4,
-                      ),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: _getNotificationColor(notification.type)
-                                  .withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Center(
-                              child: Text(
-                                _getNotificationIcon(notification.type),
-                                style: const TextStyle(fontSize: 20),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  notification.title,
-                                  style: AppTextStyles.labelLarge.copyWith(
-                                    color: AppColors.textPrimary,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  notification.description,
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    color: AppColors.textSecondary,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (!notification.isRead)
-                            Container(
-                              width: 8,
-                              height: 8,
-                              margin: const EdgeInsets.only(top: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _formatTime(notification.timestamp),
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.textSecondary,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _refreshNotifications,
+              child: _errorMessage != null
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: AppColors.error,
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                        const SizedBox(height: 16),
+                        Text(
+                          '$_errorMessage',
+                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _loadNotifications,
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    )
+                  : _notifications.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.all(16),
+                          children: [
+                            Icon(
+                              Icons.notifications_off_outlined,
+                              size: 64,
+                              color: AppColors.textSecondary,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No notifications',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        )
+                      : ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.all(12),
+                          itemCount: _notifications.length,
+                          itemBuilder: (context, index) {
+                            final notification = _notifications[index];
+                            return GestureDetector(
+                              onTap: () => _markAsRead(notification),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceDark,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border(
+                                    left: BorderSide(
+                                      color: _getNotificationColor(notification.type),
+                                      width: 4,
+                                    ),
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            color: _getNotificationColor(notification.type)
+                                                .withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              _getNotificationIcon(notification.type),
+                                              style: const TextStyle(fontSize: 20),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                notification.title,
+                                                style: AppTextStyles.labelLarge.copyWith(
+                                                  color: AppColors.textPrimary,
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                notification.description,
+                                                style: AppTextStyles.bodySmall.copyWith(
+                                                  color: AppColors.textSecondary,
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: Icon(
+                                            Icons.delete_outline,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                          onPressed: () => _deleteNotification(notification),
+                                        ),
+                                        if (!notification.isRead)
+                                          Container(
+                                            width: 8,
+                                            height: 8,
+                                            margin: const EdgeInsets.only(top: 4),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.primary,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      _formatTime(notification.timestamp),
+                                      style: AppTextStyles.labelSmall.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
             ),
     );
   }
