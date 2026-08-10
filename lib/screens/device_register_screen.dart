@@ -56,7 +56,7 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
     setState(() {
       _isRegistering = true;
       _message = null;
-    });
+    }); 
 
     try {
       final response = await ServiceLocator.instance.deviceService.registerDevice(
