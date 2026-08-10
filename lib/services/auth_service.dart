@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 import '../utils/app_constants.dart';
 import 'api_service.dart';
@@ -60,6 +61,8 @@ class AuthService {
     final token = response['accessToken']?.toString();
     final refresh = response['refreshToken']?.toString();
     final userData = response['user'] ?? response['data'];
+
+    debugPrint('AuthService._persistAuth accessToken: $token');
 
     if (token != null && token.isNotEmpty) {
       await prefs.setString(AppConstants.authTokenKey, token);

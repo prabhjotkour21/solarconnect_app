@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
 
 import '../utils/app_constants.dart';
@@ -32,8 +33,10 @@ class ApiService {
     Map<String, dynamic>? queryParams,
     String? token,
   }) async {
+    final uri = _uri(path, queryParams);
+    debugPrint('API POST: $uri tokenPresent:${token != null} body:${body ?? ''}');
     final response = await _client.post(
-      _uri(path, queryParams),
+      uri,
       headers: _headers(token),
       body: body == null ? null : jsonEncode(body),
     );
@@ -86,6 +89,8 @@ class ApiService {
       }
       return {'data': decoded};
     }
+
+    debugPrint('API Error ${response.statusCode}: ${response.body}');
 
     throw ApiException(
       statusCode: response.statusCode,

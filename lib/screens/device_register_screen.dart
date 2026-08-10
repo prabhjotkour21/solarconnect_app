@@ -48,6 +48,7 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
     }
 
     final token = await _getToken();
+    debugPrint('RegisterDevice: stored token -> $token');
     if (token == null || token.isEmpty) {
       AppDialogs.showErrorSnackBar(context, 'Please login first to register a device.');
       return;
