@@ -50,4 +50,42 @@ class EnergyReading {
         gridImportTodayKwh: 0.3,
         gridExportTodayKwh: 6.1,
       );
+
+  factory EnergyReading.fromDashboardOverview(Map<String, dynamic> overview) {
+    final currentReading = (overview['currentReading'] ?? {}) as Map<String, dynamic>;
+    final todayStats = (overview['todayStats'] ?? {}) as Map<String, dynamic>;
+
+    final double solarPowerW = _toDouble(currentReading['solarGenerated']);
+    final double consumptionPowerW = _toDouble(currentReading['consumption']);
+    final double gridPowerW = _toDouble(currentReading['gridSupply']);
+    final double batteryPercent = _toDouble(currentReading['batteryLevel']);
+    final bool batteryCharging = currentReading['inverterStatus']?.toString().toLowerCase() == 'charging' || batteryPercent >= 80;
+    final double batteryPowerW = solarPowerW - consumptionPowerW - gridPowerW;
+
+    final dateString = currentReading['timestamp']?.toString();
+    final DateTime timestamp = dateString != null
+        ? DateTime.tryParse(dateString) ?? DateTime.now()
+        : DateTime.now();
+
+    return EnergyReading(
+      timestamp: timestamp,
+      solarPowerW: solarPowerW,
+      consumptionPowerW: consumptionPowerW,
+      batteryPowerW: batteryPowerW,
+      gridPowerW: gridPowerW,
+      batteryPercent: batteryPercent.clamp(0, 100),
+      batteryCharging: batteryCharging,
+      solarTodayKwh: _toDouble(todayStats['totalGenerated']),
+      consumptionTodayKwh: _toDouble(todayStats['totalConsumed']),
+      gridImportTodayKwh: _toDouble(todayStats['totalGridSupply']),
+      gridExportTodayKwh: 0.0,
+    );
+  }
+
+  static double _toDouble(Object? value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
 }
