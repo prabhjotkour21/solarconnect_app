@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/trend_data.dart';
+import '../services/service_locator.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
@@ -13,26 +14,20 @@ class TrendsScreen extends StatefulWidget {
 }
 
 class _TrendsScreenState extends State<TrendsScreen> {
-  late TrendData _trends;
+  List<TrendDataPoint> _data = [];
   _Filter _filter = _Filter.today; // default = today
   DateTimeRange? _customRange;
+  bool _isLoading = true;
+  String? _errorMessage;
+  double _totalGeneration = 0.0;
 
   @override
   void initState() {
     super.initState();
-    _trends = TrendData.demo();
+    _loadTrendData();
   }
 
-  // ── Both graphs use the same filter ───────────────────────────────────────
-  List<TrendDataPoint> get _data {
-    switch (_filter) {
-      case _Filter.today:   return _trends.hourlyData;
-      case _Filter.weekly:  return _trends.dailyData;
-      case _Filter.monthly: return _trends.monthlyData;
-      case _Filter.yearly:  return _trends.yearlyData;
-      case _Filter.custom:  return _trends.dailyData;
-    }
-  }
+  List<TrendDataPoint> get _dataPoints => _data;
 
   String get _filterLabel {
     switch (_filter) {
@@ -51,12 +46,111 @@ class _TrendsScreenState extends State<TrendsScreen> {
 
   String get _xAxisLabel {
     switch (_filter) {
-      case _Filter.today:   return 'Time of Day';
-      case _Filter.weekly:  return 'Day of Week';
-      case _Filter.monthly: return 'Month';
-      case _Filter.yearly:  return 'Year';
-      case _Filter.custom:  return 'Date';
+      case _Filter.today:
+        return 'Time of Day';
+      case _Filter.weekly:
+        return 'Day of Week';
+      case _Filter.monthly:
+        return 'Month';
+      case _Filter.yearly:
+        return 'Year';
+      case _Filter.custom:
+        return 'Date';
     }
+  }
+
+  Future<void> _loadTrendData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      setState(() {
+        _errorMessage = 'Authentication token not found. Please login again.';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final queryParams = _buildTrendQueryParams();
+      final response = await ServiceLocator.instance.energyService.getTrends(
+        token,
+        queryParams: queryParams,
+      );
+
+      final rawData = response['data'] as List<dynamic>? ?? [];
+      final points = rawData.map((item) {
+        final label = item['label']?.toString() ?? '';
+        return TrendDataPoint(
+          time: DateTime.tryParse(label) ?? DateTime.now(),
+          value: _toDouble(item['generated'] ?? item['value']),
+          label: label,
+          sunlightHours: _toDouble(item['sunlightHours']),
+        );
+      }).toList();
+
+      setState(() {
+        _data = points;
+        _totalGeneration = _toDouble(response['summary']?['totalGenerated']);
+        _isLoading = false;
+      });
+    } catch (error) {
+      setState(() {
+        _errorMessage = error.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Map<String, dynamic> _buildTrendQueryParams() {
+    final now = DateTime.now().toUtc();
+    late final DateTime startDate;
+
+    switch (_filter) {
+      case _Filter.today:
+        startDate = DateTime(now.year, now.month, now.day).toUtc();
+        break;
+      case _Filter.weekly:
+        startDate = now.subtract(const Duration(days: 6));
+        break;
+      case _Filter.monthly:
+        startDate = now.subtract(const Duration(days: 30));
+        break;
+      case _Filter.yearly:
+        startDate = now.subtract(const Duration(days: 365));
+        break;
+      case _Filter.custom:
+        if (_customRange != null) {
+          return {
+            'granularity': 'daily',
+            'startDate': _customRange!.start.toUtc().toIso8601String(),
+            'endDate': _customRange!.end.toUtc().add(const Duration(days: 1)).toIso8601String(),
+          };
+        }
+        startDate = DateTime(now.year, now.month, now.day).toUtc();
+        break;
+    }
+
+    return {
+      'startDate': startDate.toIso8601String(),
+      'endDate': now.toIso8601String(),
+      'granularity': _filter == _Filter.today
+          ? 'hourly'
+          : _filter == _Filter.weekly
+              ? 'daily'
+              : _filter == _Filter.monthly
+                  ? 'monthly'
+                  : 'yearly',
+    };
+  }
+
+  double _toDouble(Object? value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString()) ?? 0.0;
   }
 
   // ── Filter bottom sheet ────────────────────────────────────────────────────
@@ -109,7 +203,11 @@ class _TrendsScreenState extends State<TrendsScreen> {
         if (value == _Filter.custom) {
           await _pickCustomRange();
         } else {
-          setState(() => _filter = value);
+          setState(() {
+            _filter = value;
+            _customRange = null;
+          });
+          await _loadTrendData();
         }
       },
       child: Container(
@@ -163,14 +261,17 @@ class _TrendsScreenState extends State<TrendsScreen> {
         _customRange = picked;
         _filter = _Filter.custom;
       });
+      await _loadTrendData();
     }
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final data   = _data;
-    final maxVal = data.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2;
+    final data = _dataPoints;
+    final maxVal = data.isNotEmpty
+        ? data.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2
+        : 1.0;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -223,9 +324,22 @@ class _TrendsScreenState extends State<TrendsScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.headingSmall.copyWith(color: AppColors.error),
+                    ),
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
@@ -276,7 +390,7 @@ class _TrendsScreenState extends State<TrendsScreen> {
                       children: [
                         _StatTile(
                           label: 'Total',
-                          value: '${_trends.totalGeneration} kWh',
+                          value: '${_totalGeneration.toStringAsFixed(2)} kWh',
                           icon: Icons.bolt_rounded,
                           color: AppColors.primary,
                         ),
@@ -372,14 +486,31 @@ class _TrendsScreenState extends State<TrendsScreen> {
             // ── Detailed table ───────────────────────────────────────────────
             Text('Detailed Data', style: AppTextStyles.headingMedium),
             const SizedBox(height: 12),
-            ...data.map((point) => Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceDark,
-                    borderRadius: BorderRadius.circular(8),
+            if (data.isEmpty)
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceDark,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Text(
+                    'No trend data available for the selected range.',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
                   ),
-                  child: Row(
+                ),
+              )
+            else
+              ...data.map((point) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceDark,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
                     children: [
                       SizedBox(
                         width: 48,
@@ -573,10 +704,10 @@ class _TrendsScreenState extends State<TrendsScreen> {
 
   // ── Sunlight chart (warm gradient bars) ────────────────────────────────────
   Widget _buildSunlightChart(List<TrendDataPoint> data) {
-    final maxSun = data
-        .map((p) => p.sunlightHours)
-        .reduce((a, b) => a > b ? a : b);
-    final yMax   = (maxSun * 1.2).clamp(1.0, 14.0);
+    final maxSun = data.isNotEmpty
+        ? data.map((p) => p.sunlightHours).reduce((a, b) => a > b ? a : b)
+        : 0.0;
+    final yMax = (maxSun * 1.2).clamp(1.0, 14.0);
 
     return _buildBarChart(
       data: data,
