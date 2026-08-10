@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../models/energy_reading.dart';
 import '../../models/environmental_data.dart';
+import '../../services/service_locator.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../utils/app_constants.dart';
@@ -20,29 +21,72 @@ class OverviewScreen extends StatefulWidget {
 
 class _OverviewScreenState extends State<OverviewScreen> {
   EnergyReading _reading = EnergyReading.demo();
-  Timer? _timer;
+  bool _isLoading = true;
+  String? _errorMessage;
+  List<dynamic> _weeklySummary = [];
+  Map<String, dynamic>? _dashboardMetrics;
+  Map<String, dynamic>? _energyStatistics;
+  Map<String, dynamic>? _dailySummary;
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(AppConstants.mockRefreshInterval, (_) {
-      if (mounted) setState(() => _reading = EnergyReading.demo());
-    });
+    _loadDashboardData();
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+  Future<void> _loadDashboardData() async {
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      setState(() {
+        _errorMessage = 'Authentication token not found. Please login again.';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final overview = await ServiceLocator.instance.dashboardService.getOverview(token);
+      final weeklySummary = await ServiceLocator.instance.dashboardService.getWeeklySummary(token);
+      final metrics = await ServiceLocator.instance.dashboardService.getMetrics(token);
+      final dailySummary = await ServiceLocator.instance.energyService.getDailySummary(token);
+      final statistics = await ServiceLocator.instance.energyService.getStatistics(token);
+
+      setState(() {
+        _reading = EnergyReading.fromDashboardOverview(overview);
+        _weeklySummary = weeklySummary;
+        _dashboardMetrics = metrics;
+        _dailySummary = dailySummary;
+        _energyStatistics = statistics;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.headingSmall.copyWith(color: AppColors.error),
+                    ),
+                  ),
+                )
+              : CustomScrollView(
+                  slivers: [
+                    SliverAppBar(
             expandedHeight: 100,
             floating: true,
             snap: true,
@@ -117,6 +161,40 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 ),
                 const SizedBox(height: AppConstants.paddingMD),
                 _AccumulatedCard(reading: _reading),
+                const SizedBox(height: AppConstants.paddingMD),
+                if (_energyStatistics != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMD),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Energy Statistics', style: AppTextStyles.headingSmall),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            _StatChip(
+                              label: 'Total Gen',
+                              value: '${(_energyStatistics!['totalGenerated'] ?? 0).toString()}',
+                            ),
+                            _StatChip(
+                              label: 'Total Consumed',
+                              value: '${(_energyStatistics!['totalConsumed'] ?? 0).toString()}',
+                            ),
+                            _StatChip(
+                              label: 'Battery Avg',
+                              value: '${(_energyStatistics!['averageBatteryLevel'] ?? 0).toString()}%',
+                            ),
+                            _StatChip(
+                              label: 'Temp Avg',
+                              value: '${(_energyStatistics!['averageTemperature'] ?? 0).toString()}°C',
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
               ]),
             ),
           ),
@@ -124,6 +202,34 @@ class _OverviewScreenState extends State<OverviewScreen> {
       ),
     );
   }
+}
+
+class _StatChip extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _StatChip({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceDark,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary)),
+          const SizedBox(height: 4),
+          Text(value, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
+}
 }
 
 class _AccumulatedCard extends StatelessWidget {
