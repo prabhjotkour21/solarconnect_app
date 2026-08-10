@@ -15,6 +15,23 @@ class NotificationItem {
     this.isRead = false,
   });
 
+  factory NotificationItem.fromJson(Map<String, dynamic> json) {
+    final createdAt = json['createdAt'] ?? json['timestamp'] ?? json['date'];
+    DateTime timestamp = DateTime.now();
+    if (createdAt != null) {
+      timestamp = DateTime.tryParse(createdAt.toString()) ?? DateTime.now();
+    }
+
+    return NotificationItem(
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? 'Notification',
+      description: json['message']?.toString() ?? json['description']?.toString() ?? '',
+      timestamp: timestamp,
+      type: json['category']?.toString() ?? 'info',
+      isRead: json['isRead'] == true,
+    );
+  }
+
   static List<NotificationItem> demoList() {
     return [
       NotificationItem(
