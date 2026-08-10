@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../main.dart';
+import '../../services/service_locator.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../utils/app_constants.dart';
+import '../../utils/app_dialogs.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -14,9 +16,71 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _dailySummaryEnabled = true;
+  bool _isSavingPreferences = false;
 
   bool get _isDarkMode => appThemeMode.value == ThemeMode.dark;
   String get _selectedLanguage => appLanguage.value;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotificationPreference();
+  }
+
+  Future<void> _loadNotificationPreference() async {
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      return;
+    }
+
+    try {
+      final response = await ServiceLocator.instance.authService.getMe(token);
+      final data = response['data'] ?? response;
+      if (data is Map<String, dynamic>) {
+        final preferences = data['preferences'];
+        if (preferences is Map<String, dynamic> && preferences.containsKey('notifications')) {
+          setState(() {
+            _notificationsEnabled = preferences['notifications'] == true;
+          });
+        }
+      }
+    } catch (_) {
+      // Ignore on failure; keep default toggle state.
+    }
+  }
+
+  Future<void> _updateNotificationPreference(bool value) async {
+    setState(() {
+      _notificationsEnabled = value;
+      _isSavingPreferences = true;
+    });
+
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      setState(() {
+        _isSavingPreferences = false;
+      });
+      AppDialogs.showErrorSnackBar(context, 'Authentication required. Please login again.');
+      return;
+    }
+
+    try {
+      await ServiceLocator.instance.notificationService.updatePreferences(
+        token,
+        notifications: value,
+      );
+      AppDialogs.showSuccessSnackBar(context, 'Notification preferences saved.');
+    } catch (e) {
+      setState(() {
+        _notificationsEnabled = !value;
+      });
+      AppDialogs.showErrorSnackBar(context, e.toString());
+    } finally {
+      setState(() {
+        _isSavingPreferences = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +108,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 subtitle: 'Receive alerts for energy insights',
                 trailing: Switch(
                   value: _notificationsEnabled,
-                  onChanged: (v) => setState(() => _notificationsEnabled = v),
+                  onChanged: _isSavingPreferences ? null : _updateNotificationPreference,
                   activeColor: AppColors.primary,
                 ),
               ),
