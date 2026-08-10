@@ -12,6 +12,38 @@ class PowerCutEvent {
     required this.consumedPowerKw,
     this.solarPowerKw = 0.0,
   });
+
+  factory PowerCutEvent.fromJson(Map<String, dynamic> json) {
+    final startTime = json['startTime'] ?? json['date'];
+    DateTime date = DateTime.now();
+    if (startTime != null) {
+      date = DateTime.tryParse(startTime.toString()) ?? DateTime.now();
+    }
+
+    final status = json['status']?.toString() ?? '';
+    final severity = _severityForStatus(status);
+
+    return PowerCutEvent(
+      date: date,
+      durationMinutes: json['duration'] is num ? (json['duration'] as num).toInt() : 0,
+      severity: severity,
+      consumedPowerKw: json['consumedPowerKw'] is num ? (json['consumedPowerKw'] as num).toDouble() : 0.0,
+      solarPowerKw: json['solarPowerKw'] is num ? (json['solarPowerKw'] as num).toDouble() : 0.0,
+    );
+  }
+
+  static String _severityForStatus(String status) {
+    switch (status) {
+      case 'started':
+        return 'high';
+      case 'ended':
+        return 'medium';
+      case 'resolved':
+        return 'low';
+      default:
+        return 'medium';
+    }
+  }
 }
 
 class PowerCutData {
