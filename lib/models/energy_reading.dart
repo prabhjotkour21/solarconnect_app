@@ -52,8 +52,16 @@ class EnergyReading {
       );
 
   factory EnergyReading.fromDashboardOverview(Map<String, dynamic> overview) {
-    final currentReading = (overview['currentReading'] ?? {}) as Map<String, dynamic>;
-    final todayStats = (overview['todayStats'] ?? {}) as Map<String, dynamic>;
+    final currentReading = Map<String, dynamic>.from(
+      overview['currentReading'] is Map
+          ? overview['currentReading'] as Map
+          : {},
+    );
+    final todayStats = Map<String, dynamic>.from(
+      overview['todayStats'] is Map
+          ? overview['todayStats'] as Map
+          : {},
+    );
 
     final double solarPowerW = _toDouble(currentReading['solarGenerated']);
     final double consumptionPowerW = _toDouble(currentReading['consumption']);
