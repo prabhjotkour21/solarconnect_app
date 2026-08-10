@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../services/service_locator.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
+import '../../utils/app_dialogs.dart';
 
 class WifiConfigScreen extends StatefulWidget {
   const WifiConfigScreen({super.key});
@@ -13,6 +15,115 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
   String? _selectedNetwork;
   final _passwordController = TextEditingController();
   bool _showPassword = false;
+  bool _isProcessing = false;
+  String? _statusMessage;
+  String? _inverterId;
+  String? _errorMessage;
+
+  final List<Map<String, dynamic>> _networks = [
+    {'name': 'Salarlogger\'s Wi-Fi', 'signal': 85, 'locked': false},
+    {'name': 'NETPLUS_5G', 'signal': 60, 'locked': false},
+    {'name': 'Vodafone', 'signal': 40, 'locked': true},
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFirstInverter();
+  }
+
+  Future<void> _loadFirstInverter() async {
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      setState(() {
+        _errorMessage = 'Authentication required. Please login again.';
+      });
+      return;
+    }
+
+    try {
+      final response = await ServiceLocator.instance.inverterService.getInverters(token);
+      final raw = response['data'] ?? response;
+      if (raw is List && raw.isNotEmpty) {
+        final first = raw.first;
+        if (first is Map<String, dynamic>) {
+          setState(() {
+            _inverterId = first['_id']?.toString() ?? first['id']?.toString();
+            _errorMessage = null;
+          });
+        } else if (first is Map) {
+          setState(() {
+            _inverterId = first['_id']?.toString() ?? first['id']?.toString();
+            _errorMessage = null;
+          });
+        }
+      } else {
+        setState(() {
+          _errorMessage = 'No paired inverters found. Please pair an inverter first.';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    }
+  }
+
+  Future<void> _configureWifi() async {
+    if (_selectedNetwork == null) {
+      AppDialogs.showErrorSnackBar(context, 'Please select a Wi-Fi network first.');
+      return;
+    }
+
+    final password = _passwordController.text.trim();
+    if (password.isEmpty || password.length < 8) {
+      AppDialogs.showErrorSnackBar(context, 'Please enter a valid Wi-Fi password (min 8 characters).');
+      return;
+    }
+
+    if (_inverterId == null || _inverterId!.isEmpty) {
+      AppDialogs.showErrorSnackBar(context, 'No inverter selected. Please pair an inverter first.');
+      return;
+    }
+
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      AppDialogs.showErrorSnackBar(context, 'Authentication required. Please login again.');
+      return;
+    }
+
+    setState(() {
+      _isProcessing = true;
+      _statusMessage = null;
+      _errorMessage = null;
+    });
+
+    try {
+      await ServiceLocator.instance.wifiConfigService.configureWifi(
+        _inverterId!,
+        token,
+        ssid: _selectedNetwork!,
+        password: password,
+        timeoutSeconds: 60,
+        retry: true,
+      );
+
+      setState(() {
+        _statusMessage = 'Wi-Fi credentials sent successfully.';
+      });
+
+      AppDialogs.showSuccessSnackBar(context, 'Wi-Fi configuration sent to inverter.');
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+      });
+      AppDialogs.showErrorSnackBar(context, e.toString());
+    } finally {
+      setState(() {
+        _isProcessing = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,10 +177,44 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
                       color: AppColors.primary,
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _inverterId == null ? 'Waiting for inverter details...' : 'Using inverter: $_inverterId',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
+
+            if (_errorMessage != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _errorMessage!,
+                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
+                ),
+              ),
+            if (_statusMessage != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _statusMessage!,
+                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.success),
+                ),
+              ),
 
             Text(
               'Select Network',
@@ -77,12 +222,7 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
             ),
             const SizedBox(height: 8),
 
-            // Network list
-            ...[
-              {'name': 'Salarlogger\'s Wi-Fi', 'signal': 85, 'locked': false},
-              {'name': 'NETPLUS_5G', 'signal': 60, 'locked': false},
-              {'name': 'Vodafone', 'signal': 40, 'locked': true},
-            ].map((network) {
+            ..._networks.map((network) {
               final isSelected = _selectedNetwork == network['name'];
               return GestureDetector(
                 onTap: () {
@@ -224,16 +364,7 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Connecting to $_selectedNetwork...',
-                        ),
-                        backgroundColor: AppColors.primary,
-                      ),
-                    );
-                  },
+                  onPressed: _isProcessing ? null : _configureWifi,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -242,7 +373,7 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
                     ),
                   ),
                   child: Text(
-                    'Connect',
+                    _isProcessing ? 'Connecting...' : 'Connect',
                     style: AppTextStyles.labelLarge.copyWith(
                       color: AppColors.textPrimary,
                     ),
