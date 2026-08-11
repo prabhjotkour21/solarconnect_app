@@ -26,8 +26,7 @@ dependencies:
   # shared_preferences: Saves key-value pairs on the device permanently.
   # We use it to store user settings (theme preference, unit system, etc.)
   # Works on Android, iOS, web, desktop — no setup required.
-  shared_preferences: ^2.3.0
-
+  shared_preferences: ^2.3.0  socket_io_client: ^2.0.0
   # ── Networking ───────────────────────────────────────────────────────────
   # http: Used for REST API calls from the Flutter app to the backend.
   http: ^1.2.2
