@@ -44,3 +44,4 @@ abstract class AppConstants {
   // ── Demo / mock data refresh interval ────────────────────────────────────
   static const Duration mockRefreshInterval = Duration(seconds: 5);
 }
+
