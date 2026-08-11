@@ -34,15 +34,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     try {
-      final response = await ServiceLocator.instance.authService.getMe(token);
+      final response = await ServiceLocator.instance.settingsService.getNotificationSettings(token);
       final data = response['data'] ?? response;
       if (data is Map<String, dynamic>) {
-        final preferences = data['preferences'];
-        if (preferences is Map<String, dynamic> && preferences.containsKey('notifications')) {
-          setState(() {
-            _notificationsEnabled = preferences['notifications'] == true;
-          });
-        }
+        setState(() {
+          _notificationsEnabled = data['notifications'] == true;
+        });
       }
     } catch (_) {
       // Ignore on failure; keep default toggle state.
@@ -65,7 +62,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     try {
-      await ServiceLocator.instance.notificationService.updatePreferences(
+      await ServiceLocator.instance.settingsService.updateNotificationSettings(
         token,
         notifications: value,
       );
