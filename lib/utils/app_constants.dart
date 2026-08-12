@@ -20,6 +20,14 @@ abstract class AppConstants {
     return 'http://localhost:5000/api/v1';
   }
 
+  static String get websocketUrl {
+    final uri = Uri.parse(apiBaseUrl);
+    final scheme = uri.scheme == 'https' ? 'wss' : 'ws';
+    final host = uri.host;
+    final port = uri.hasPort ? ':${uri.port}' : '';
+    return '$scheme://$host$port/energy';
+  }
+
   static const String authTokenKey = 'auth_token';
   static const String refreshTokenKey = 'refresh_token';
   static const String userDataKey = 'user_data';
