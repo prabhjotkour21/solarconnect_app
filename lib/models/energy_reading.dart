@@ -90,6 +90,36 @@ class EnergyReading {
     );
   }
 
+  factory EnergyReading.fromSocketPayload(Map<String, dynamic> payload) {
+    final solarPowerW = _toDouble(payload['solarPowerW'] ?? payload['solarGenerated']);
+    final consumptionPowerW = _toDouble(payload['consumptionW'] ?? payload['consumption']);
+    final gridPowerW = _toDouble(payload['gridSupplyW'] ?? payload['gridPowerW'] ?? payload['gridSupply']);
+    final batteryPercent = _toDouble(payload['batteryPercent'] ?? payload['batteryLevel']);
+    final bool batteryCharging =
+        payload['batteryCharging'] == true ||
+        payload['inverterStatus']?.toString().toLowerCase() == 'charging' ||
+        batteryPercent >= 80;
+
+    final timestampValue = payload['timestamp'] ?? payload['readingTimestamp'];
+    final DateTime timestamp = timestampValue is String
+        ? DateTime.tryParse(timestampValue) ?? DateTime.now()
+        : DateTime.now();
+
+    return EnergyReading(
+      timestamp: timestamp,
+      solarPowerW: solarPowerW,
+      consumptionPowerW: consumptionPowerW,
+      batteryPowerW: solarPowerW - consumptionPowerW - gridPowerW,
+      gridPowerW: gridPowerW,
+      batteryPercent: batteryPercent.clamp(0, 100),
+      batteryCharging: batteryCharging,
+      solarTodayKwh: _toDouble(payload['solarTodayKwh'] ?? payload['totalGenerated']),
+      consumptionTodayKwh: _toDouble(payload['consumptionTodayKwh'] ?? payload['totalConsumed']),
+      gridImportTodayKwh: _toDouble(payload['gridImportTodayKwh'] ?? payload['totalGridSupply']),
+      gridExportTodayKwh: _toDouble(payload['gridExportTodayKwh'] ?? 0),
+    );
+  }
+
   static double _toDouble(Object? value) {
     if (value == null) return 0.0;
     if (value is num) return value.toDouble();
