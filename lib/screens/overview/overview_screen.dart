@@ -27,11 +27,19 @@ class _OverviewScreenState extends State<OverviewScreen> {
   Map<String, dynamic>? _dashboardMetrics;
   Map<String, dynamic>? _energyStatistics;
   Map<String, dynamic>? _dailySummary;
+  Map<String, dynamic>? _inverterStatus;
 
   @override
   void initState() {
     super.initState();
     _loadDashboardData();
+    _connectSocket();
+  }
+
+  @override
+  void dispose() {
+    ServiceLocator.instance.socketService.disconnect();
+    super.dispose();
   }
 
   Future<void> _loadDashboardData() async {
@@ -71,6 +79,45 @@ class _OverviewScreenState extends State<OverviewScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _connectSocket() async {
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      return;
+    }
+
+    final socketService = ServiceLocator.instance.socketService;
+    socketService.connect(
+      url: AppConstants.websocketUrl,
+      token: token,
+    );
+
+    socketService.on('energy:live', (data) {
+      if (!mounted || data is! Map) {
+        return;
+      }
+
+      setState(() {
+        _reading = EnergyReading.fromSocketPayload(Map<String, dynamic>.from(data));
+      });
+    });
+
+    socketService.on('inverter:live-status', (data) {
+      if (!mounted || data is! Map) {
+        return;
+      }
+
+      setState(() {
+        _inverterStatus = Map<String, dynamic>.from(data);
+      });
+    });
+
+    socketService.on('heartbeat:ping', (_) {
+      socketService.handleHeartbeatPing();
+    });
+
+    socketService.subscribeToEnergy();
   }
 
   @override
