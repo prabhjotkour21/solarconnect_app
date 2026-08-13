@@ -16,6 +16,8 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _dailySummaryEnabled = true;
+  bool _allowDataSharing = false;
+  bool _analyticsOptIn = false;
   bool _isSavingPreferences = false;
 
   bool get _isDarkMode => appThemeMode.value == ThemeMode.dark;
@@ -24,25 +26,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadNotificationPreference();
+    _loadAllSettings();
   }
 
-  Future<void> _loadNotificationPreference() async {
+  Future<void> _loadAllSettings() async {
     final token = await ServiceLocator.instance.authService.getStoredToken();
     if (token == null || token.isEmpty) {
       return;
     }
 
     try {
-      final response = await ServiceLocator.instance.settingsService.getNotificationSettings(token);
-      final data = response['data'] ?? response;
-      if (data is Map<String, dynamic>) {
-        setState(() {
-          _notificationsEnabled = data['notifications'] == true;
-        });
+      final notificationsResponse = await ServiceLocator.instance.settingsService.getNotificationSettings(token);
+      final appearanceResponse = await ServiceLocator.instance.settingsService.getAppearanceSettings(token);
+      final privacyResponse = await ServiceLocator.instance.settingsService.getPrivacySettings(token);
+
+      final notificationData = notificationsResponse['data'] ?? notificationsResponse;
+      final appearanceData = appearanceResponse['data'] ?? appearanceResponse;
+      final privacyData = privacyResponse['data'] ?? privacyResponse;
+
+      if (notificationData is Map) {
+        _notificationsEnabled = notificationData['notifications'] == true;
+      }
+
+      if (appearanceData is Map) {
+        final theme = appearanceData['theme']?.toString();
+        final language = appearanceData['language']?.toString();
+        if (theme != null) {
+          appThemeMode.value = theme.toLowerCase() == 'dark' ? ThemeMode.dark : ThemeMode.light;
+        }
+        if (language != null) {
+          appLanguage.value = _languageLabelFromCode(language);
+        }
+      }
+
+      if (privacyData is Map) {
+        _allowDataSharing = privacyData['allowDataSharing'] == true;
+        _analyticsOptIn = privacyData['analyticsOptIn'] == true;
+      }
+
+      if (mounted) {
+        setState(() {});
       }
     } catch (_) {
-      // Ignore on failure; keep default toggle state.
+      // Ignore on failure and keep default toggle state.
+    }
+  }
+
+  String _languageLabelFromCode(String value) {
+    switch (value.toLowerCase()) {
+      case 'hi':
+      case 'hindi':
+        return 'Hindi';
+      case 'es':
+      case 'spanish':
+        return 'Spanish';
+      case 'fr':
+      case 'french':
+        return 'French';
+      case 'de':
+      case 'german':
+        return 'German';
+      default:
+        return 'English';
+    }
+  }
+
+  String _languageCodeFromLabel(String value) {
+    switch (value.toLowerCase()) {
+      case 'hindi':
+        return 'hi';
+      case 'spanish':
+        return 'es';
+      case 'french':
+        return 'fr';
+      case 'german':
+        return 'de';
+      default:
+        return 'en';
     }
   }
 
@@ -76,6 +136,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _isSavingPreferences = false;
       });
+    }
+  }
+
+  Future<void> _updateAppearancePreference(bool value) async {
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      AppDialogs.showErrorSnackBar(context, 'Authentication required. Please login again.');
+      return;
+    }
+
+    final theme = value ? 'dark' : 'light';
+    appThemeMode.value = value ? ThemeMode.dark : ThemeMode.light;
+
+    try {
+      await ServiceLocator.instance.settingsService.updateAppearanceSettings(
+        token,
+        theme: theme,
+        language: _languageCodeFromLabel(appLanguage.value),
+      );
+    } catch (e) {
+      AppDialogs.showErrorSnackBar(context, e.toString());
+    }
+    setState(() {});
+  }
+
+  Future<void> _updatePrivacyPreference({required bool allowDataSharing, required bool analyticsOptIn}) async {
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      AppDialogs.showErrorSnackBar(context, 'Authentication required. Please login again.');
+      return;
+    }
+
+    try {
+      await ServiceLocator.instance.settingsService.updatePrivacySettings(
+        token,
+        allowDataSharing: allowDataSharing,
+        analyticsOptIn: analyticsOptIn,
+      );
+      setState(() {
+        _allowDataSharing = allowDataSharing;
+        _analyticsOptIn = analyticsOptIn;
+      });
+      AppDialogs.showSuccessSnackBar(context, 'Privacy settings saved.');
+    } catch (e) {
+      AppDialogs.showErrorSnackBar(context, e.toString());
     }
   }
 
@@ -127,8 +232,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 subtitle: _isDarkMode ? 'Currently: Dark' : 'Currently: Light',
                 trailing: Switch(
                   value: _isDarkMode,
-                  onChanged: (v) {
-                    appThemeMode.value = v ? ThemeMode.dark : ThemeMode.light;
+                  onChanged: (v) async {
+                    await _updateAppearancePreference(v);
                     setState(() {});
                   },
                   activeColor: AppColors.primary,
@@ -138,9 +243,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _SectionHeader('Language'),
               _LanguageTile(
                 selectedLanguage: _selectedLanguage,
-                onChanged: (lang) {
+                onChanged: (lang) async {
                   appLanguage.value = lang;
                   setState(() {});
+
+                  final token = await ServiceLocator.instance.authService.getStoredToken();
+                  if (token != null && token.isNotEmpty) {
+                    await ServiceLocator.instance.settingsService.updateAppearanceSettings(
+                      token,
+                      language: _languageCodeFromLabel(lang),
+                    );
+                  }
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Language changed to $lang'),
@@ -166,6 +280,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               _SectionHeader('Privacy & Security'),
+              _SettingTile(
+                icon: Icons.share_outlined,
+                title: 'Data Sharing',
+                subtitle: 'Allow anonymized data sharing for system improvements',
+                trailing: Switch(
+                  value: _allowDataSharing,
+                  onChanged: (v) => _updatePrivacyPreference(
+                    allowDataSharing: v,
+                    analyticsOptIn: _analyticsOptIn,
+                  ),
+                  activeColor: AppColors.primary,
+                ),
+              ),
+              _SettingTile(
+                icon: Icons.analytics_outlined,
+                title: 'Analytics Opt-In',
+                subtitle: 'Help improve user insights and product analytics',
+                trailing: Switch(
+                  value: _analyticsOptIn,
+                  onChanged: (v) => _updatePrivacyPreference(
+                    allowDataSharing: _allowDataSharing,
+                    analyticsOptIn: v,
+                  ),
+                  activeColor: AppColors.primary,
+                ),
+              ),
               _SettingTile(
                 icon: Icons.privacy_tip,
                 title: 'Privacy Policy',
