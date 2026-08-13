@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../models/notification_item.dart';
 import '../../services/service_locator.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
+import '../../utils/app_constants.dart';
 import '../../utils/app_dialogs.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -18,11 +21,61 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _isRefreshing = false;
   String? _errorMessage;
   int _unreadCount = 0;
+  StreamSubscription<Map<String, dynamic>>? _notificationSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadNotifications();
+    _listenForRealtimeNotifications();
+  }
+
+  @override
+  void dispose() {
+    _notificationSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _listenForRealtimeNotifications() async {
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      return;
+    }
+
+    final socketService = ServiceLocator.instance.socketService;
+    if (!socketService.isConnected) {
+      socketService.connect(
+        url: AppConstants.websocketUrl,
+        token: token,
+      );
+    }
+
+    _notificationSubscription = socketService.liveNotificationStream.listen((payload) {
+      if (!mounted) {
+        return;
+      }
+
+      final notification = NotificationItem(
+        id: payload['_id']?.toString() ??
+            payload['id']?.toString() ??
+            DateTime.now().millisecondsSinceEpoch.toString(),
+        title: payload['title']?.toString() ?? 'New notification',
+        description: payload['message']?.toString() ??
+            payload['description']?.toString() ??
+            'You have a new update from SolarConnect.',
+        timestamp: DateTime.tryParse(payload['timestamp']?.toString() ?? '') ?? DateTime.now(),
+        type: payload['category']?.toString() ?? 'update',
+        isRead: false,
+      );
+
+      setState(() {
+        final alreadyExists = _notifications.any((item) => item.id == notification.id);
+        if (!alreadyExists) {
+          _notifications.insert(0, notification);
+          _unreadCount += 1;
+        }
+      });
+    });
   }
 
   Future<void> _loadNotifications({bool refreshing = false}) async {
