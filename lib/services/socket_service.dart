@@ -12,12 +12,15 @@ class SocketService {
       StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _inverterController =
       StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _notificationController =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   IO.Socket? get socket => _socket;
   String get url => _url ?? '';
   bool get isConnected => _connected;
   Stream<Map<String, dynamic>> get liveEnergyStream => _energyController.stream;
   Stream<Map<String, dynamic>> get inverterStatusStream => _inverterController.stream;
+  Stream<Map<String, dynamic>> get liveNotificationStream => _notificationController.stream;
 
   void connect({required String url, required String token}) {
     _url = url;
@@ -67,6 +70,11 @@ class SocketService {
           _inverterController.add(Map<String, dynamic>.from(data));
         }
       })
+      ..on('notification:new', (data) {
+        if (data is Map) {
+          _notificationController.add(Map<String, dynamic>.from(data));
+        }
+      })
       ..on('heartbeat:ping', (_) {
         handleHeartbeatPing();
       })
@@ -76,6 +84,7 @@ class SocketService {
 
     _socket?.connect();
     subscribeToEnergy();
+    subscribeToNotifications();
   }
 
   void disconnect() {
@@ -87,6 +96,12 @@ class SocketService {
   void subscribeToEnergy() {
     if (_socket?.connected == true) {
       _socket?.emit('subscribe:energy', {});
+    }
+  }
+
+  void subscribeToNotifications() {
+    if (_socket?.connected == true) {
+      _socket?.emit('subscribe:notifications', {});
     }
   }
 
