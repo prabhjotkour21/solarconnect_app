@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 /// App-wide constants.
 ///
@@ -11,13 +12,14 @@ abstract class AppConstants {
   // ── API configuration ────────────────────────────────────────────────────
   static String get apiBaseUrl {
     if (kIsWeb) {
-      return 'http://localhost:5000/api/v1';
+      return 'http://192.168.1.139:3000/api/v1';
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
       // return 'http://10.0.2.2:5000/api/v1';
+      //192.168.1.139
       return 'http://192.168.1.139:3000/api/v1';
     }
-    return 'http://localhost:5000/api/v1';
+    return 'http://192.168.1.139:3000/api/v1';
   }
 
   static String get websocketUrl {
@@ -52,4 +54,3 @@ abstract class AppConstants {
   // ── Demo / mock data refresh interval ────────────────────────────────────
   static const Duration mockRefreshInterval = Duration(seconds: 5);
 }
-

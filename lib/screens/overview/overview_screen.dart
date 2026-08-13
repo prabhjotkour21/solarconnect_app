@@ -88,10 +88,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
     }
 
     final socketService = ServiceLocator.instance.socketService;
-    socketService.connect(
-      url: AppConstants.websocketUrl,
-      token: token,
-    );
+    socketService.connect(url: AppConstants.websocketUrl, token: token);
 
     socketService.on('energy:live', (data) {
       if (!mounted || data is! Map) {
@@ -99,7 +96,9 @@ class _OverviewScreenState extends State<OverviewScreen> {
       }
 
       setState(() {
-        _reading = EnergyReading.fromSocketPayload(Map<String, dynamic>.from(data));
+        _reading = EnergyReading.fromSocketPayload(
+          Map<String, dynamic>.from(data),
+        );
       });
     });
 
