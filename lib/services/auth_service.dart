@@ -62,6 +62,12 @@ class AuthService {
     return null;
   }
 
+  Future<void> persistUserData(Map<String, dynamic> userData) async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = jsonEncode(userData);
+    await prefs.setString(AppConstants.userDataKey, encoded);
+  }
+
   Future<String?> getStoredToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(AppConstants.authTokenKey);
