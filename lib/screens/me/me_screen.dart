@@ -350,8 +350,11 @@ class _MeScreenState extends State<MeScreen> {
           final cs = Theme.of(context).colorScheme;
           return Scaffold(
             backgroundColor: cs.surface,
-            body: CustomScrollView(
-              slivers: [
+            body: SafeArea(
+              top: true,
+              bottom: true,
+              child: CustomScrollView(
+                slivers: [
                 SliverAppBar(
                   backgroundColor: cs.surface,
                   title: Text('My Account', style: AppTextStyles.headingMedium),
@@ -501,6 +504,7 @@ class _MeScreenState extends State<MeScreen> {
                   ),
                 ),
               ],
+              ),
             ),
           );
         },
