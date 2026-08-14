@@ -97,7 +97,8 @@ class _OverviewScreenState extends State<OverviewScreen> {
       _isRefreshing = true;
     });
     await _loadDashboardData();
-    if (mounted && ServiceLocator.instance.authService.getStoredToken() != null) {
+    if (mounted &&
+        ServiceLocator.instance.authService.getStoredToken() != null) {
       _connectSocket();
     }
   }
@@ -164,158 +165,159 @@ class _OverviewScreenState extends State<OverviewScreen> {
               )
             : CustomScrollView(
                 slivers: [
-                SliverAppBar(
-                  expandedHeight: 100,
-                  floating: true,
-                  snap: true,
-                  backgroundColor: AppColors.backgroundDark,
-                  actions: [
-                    IconButton(
-                      icon: const Icon(Icons.refresh, size: 20),
-                      onPressed: _refreshOverview,
-                    ),
-                  ],
-                  flexibleSpace: FlexibleSpaceBar(
-                    titlePadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    title: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Good Morning ☀️',
-                              style: AppTextStyles.bodySmall.copyWith(
-                                fontSize: 11,
-                              ),
-                            ),
-                            Text(
-                              'SolarConnect',
-                              style: AppTextStyles.headingMedium.copyWith(
-                                color: AppColors.primary,
-                                fontSize: 18,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.success.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: AppColors.success.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
+                  SliverAppBar(
+                    expandedHeight: 100,
+                    floating: true,
+                    snap: true,
+                    backgroundColor: AppColors.backgroundDark,
+                    actions: [
+                      IconButton(
+                        icon: const Icon(Icons.refresh, size: 20),
+                        onPressed: _refreshOverview,
+                      ),
+                    ],
+                    flexibleSpace: FlexibleSpaceBar(
+                      titlePadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      title: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.wb_sunny_rounded,
-                                color: AppColors.warning,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 4),
                               Text(
-                                '${(_reading.solarPowerW / 1000).toStringAsFixed(1)} kW',
-                                style: AppTextStyles.labelSmall.copyWith(
-                                  color: AppColors.success,
-                                  fontWeight: FontWeight.w600,
+                                'Good Morning ☀️',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  fontSize: 11,
+                                ),
+                              ),
+                              Text(
+                                'SolarConnect',
+                                style: AppTextStyles.headingMedium.copyWith(
+                                  color: AppColors.primary,
+                                  fontSize: 18,
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: AppColors.success.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.wb_sunny_rounded,
+                                  color: AppColors.warning,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${(_reading.solarPowerW / 1000).toStringAsFixed(1)} kW',
+                                  style: AppTextStyles.labelSmall.copyWith(
+                                    color: AppColors.success,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.only(
-                    bottom: AppConstants.paddingXL,
-                  ),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      EnergyFlowSection(reading: _reading),
-                      const SizedBox(height: AppConstants.paddingMD),
-                      EnergyStatsSection(reading: _reading),
-                      const SizedBox(height: AppConstants.paddingMD),
-                      BatteryCard(reading: _reading),
-                      const SizedBox(height: AppConstants.paddingMD),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppConstants.paddingMD,
-                        ),
-                        child: EconomicBenefitsCard(
-                          solarTodayKwh: _reading.solarTodayKwh,
-                          solarTotalKwh: _reading.solarTodayKwh * 287,
-                        ),
-                      ),
-                      const SizedBox(height: AppConstants.paddingMD),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppConstants.paddingMD,
-                        ),
-                        child: EnvironmentalBenefitsCard(
-                          data: EnvironmentalData.fromGeneration(
-                            _reading.solarTodayKwh,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AppConstants.paddingMD),
-                      _AccumulatedCard(reading: _reading),
-                      const SizedBox(height: AppConstants.paddingMD),
-                      if (_energyStatistics != null)
+                  SliverPadding(
+                    padding: const EdgeInsets.only(
+                      bottom: AppConstants.paddingXL,
+                    ),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        EnergyFlowSection(reading: _reading),
+                        const SizedBox(height: AppConstants.paddingMD),
+                        EnergyStatsSection(reading: _reading),
+                        const SizedBox(height: AppConstants.paddingMD),
+                        BatteryCard(reading: _reading),
+                        const SizedBox(height: AppConstants.paddingMD),
                         Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppConstants.paddingMD,
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Energy Statistics',
-                                style: AppTextStyles.headingSmall,
-                              ),
-                              const SizedBox(height: 12),
-                              Wrap(
-                                spacing: 12,
-                                runSpacing: 12,
-                                children: [
-                                  _StatChip(
-                                    label: 'Total Gen',
-                                    value:
-                                        '${(_energyStatistics!['totalGenerated'] ?? 0).toString()}',
-                                  ),
-                                  _StatChip(
-                                    label: 'Total Consumed',
-                                    value:
-                                        '${(_energyStatistics!['totalConsumed'] ?? 0).toString()}',
-                                  ),
-                                  _StatChip(
-                                    label: 'Battery Avg',
-                                    value:
-                                        '${(_energyStatistics!['averageBatteryLevel'] ?? 0).toString()}%',
-                                  ),
-                                  _StatChip(
-                                    label: 'Temp Avg',
-                                    value:
-                                        '${(_energyStatistics!['averageTemperature'] ?? 0).toString()}°C',
-                                  ),
-                                ],
-                              ),
-                            ],
+                          child: EconomicBenefitsCard(
+                            solarTodayKwh: _reading.solarTodayKwh,
+                            solarTotalKwh: _reading.solarTodayKwh * 287,
                           ),
                         ),
-                    ]),
+                        const SizedBox(height: AppConstants.paddingMD),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.paddingMD,
+                          ),
+                          child: EnvironmentalBenefitsCard(
+                            data: EnvironmentalData.fromGeneration(
+                              _reading.solarTodayKwh,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppConstants.paddingMD),
+                        _AccumulatedCard(reading: _reading),
+                        const SizedBox(height: AppConstants.paddingMD),
+                        if (_energyStatistics != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppConstants.paddingMD,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Energy Statistics',
+                                  style: AppTextStyles.headingSmall,
+                                ),
+                                const SizedBox(height: 12),
+                                Wrap(
+                                  spacing: 12,
+                                  runSpacing: 12,
+                                  children: [
+                                    _StatChip(
+                                      label: 'Total Gen',
+                                      value:
+                                          '${(_energyStatistics!['totalGenerated'] ?? 0).toString()}',
+                                    ),
+                                    _StatChip(
+                                      label: 'Total Consumed',
+                                      value:
+                                          '${(_energyStatistics!['totalConsumed'] ?? 0).toString()}',
+                                    ),
+                                    _StatChip(
+                                      label: 'Battery Avg',
+                                      value:
+                                          '${(_energyStatistics!['averageBatteryLevel'] ?? 0).toString()}%',
+                                    ),
+                                    _StatChip(
+                                      label: 'Temp Avg',
+                                      value:
+                                          '${(_energyStatistics!['averageTemperature'] ?? 0).toString()}°C',
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                      ]),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+      ),
     );
   }
 }
