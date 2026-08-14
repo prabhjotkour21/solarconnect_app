@@ -175,6 +175,117 @@ class _MeScreenState extends State<MeScreen> {
     }
   }
 
+  Future<void> _openEditProfileDialog() async {
+    final firstNameController = TextEditingController(
+      text: _userProfile['firstName']?.toString() ?? '',
+    );
+    final lastNameController = TextEditingController(
+      text: _userProfile['lastName']?.toString() ?? '',
+    );
+    final phoneController = TextEditingController(
+      text: _userProfile['phoneNumber']?.toString() ?? '',
+    );
+
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text('Edit Profile', style: AppTextStyles.headingMedium),
+          content: SizedBox(
+            width: 400,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: firstNameController,
+                    decoration: const InputDecoration(labelText: 'First Name'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: lastNameController,
+                    decoration: const InputDecoration(labelText: 'Last Name'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: phoneController,
+                    decoration: const InputDecoration(labelText: 'Phone Number'),
+                    keyboardType: TextInputType.phone,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context, {
+                  'firstName': firstNameController.text.trim(),
+                  'lastName': lastNameController.text.trim(),
+                  'phoneNumber': phoneController.text.trim(),
+                });
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == null || !mounted) return;
+
+    final firstName = result['firstName'] ?? '';
+    final lastName = result['lastName'] ?? '';
+    final phoneNumber = result['phoneNumber'] ?? '';
+
+    if (firstName.isEmpty && lastName.isEmpty && phoneNumber.isEmpty) {
+      return;
+    }
+
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      AppDialogs.showErrorSnackBar(context, 'Authentication required. Please login again.');
+      return;
+    }
+
+    try {
+      final payload = <String, dynamic>{};
+      if (firstName.isNotEmpty) payload['firstName'] = firstName;
+      if (lastName.isNotEmpty) payload['lastName'] = lastName;
+      if (phoneNumber.isNotEmpty) payload['phoneNumber'] = phoneNumber;
+
+      final updatedResponse = await ServiceLocator.instance.userProfileService.updateProfile(
+        token,
+        data: payload,
+      );
+
+      final updatedProfile = updatedResponse['data'] is Map
+          ? Map<String, dynamic>.from(updatedResponse['data'])
+          : updatedResponse;
+
+      setState(() {
+        _userProfile = Map<String, dynamic>.from(updatedProfile);
+      });
+
+      await ServiceLocator.instance.authService.persistUserData(
+        Map<String, dynamic>.from(updatedProfile),
+      );
+
+      if (mounted) {
+        AppDialogs.showSuccessSnackBar(context, 'Profile updated successfully');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppDialogs.showErrorSnackBar(context, e.toString());
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Rebuild when theme or language changes
@@ -369,7 +480,7 @@ class _ProfileHeader extends StatelessWidget {
           IconButton(
             icon: Icon(Icons.edit_outlined,
                 color: cs.onSurfaceVariant, size: 20),
-            onPressed: () {},
+            onPressed: _openEditProfileDialog,
           ),
         ],
       ),
