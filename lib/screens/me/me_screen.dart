@@ -36,7 +36,8 @@ class _MeScreenState extends State<MeScreen> {
   Future<void> _loadUserProfile() async {
     final token = await ServiceLocator.instance.authService.getStoredToken();
     if (token == null || token.isEmpty) {
-      final storedUser = await ServiceLocator.instance.authService.getStoredUserData();
+      final storedUser = await ServiceLocator.instance.authService
+          .getStoredUserData();
       if (mounted) {
         setState(() {
           _userProfile = storedUser ?? {};
@@ -48,7 +49,9 @@ class _MeScreenState extends State<MeScreen> {
 
     try {
       final response = await ServiceLocator.instance.authService.getMe(token);
-      final profile = response['data'] is Map ? Map<String, dynamic>.from(response['data']) : response;
+      final profile = response['data'] is Map
+          ? Map<String, dynamic>.from(response['data'])
+          : response;
       if (mounted) {
         setState(() {
           _userProfile = profile;
@@ -56,7 +59,8 @@ class _MeScreenState extends State<MeScreen> {
         });
       }
     } catch (_) {
-      final storedUser = await ServiceLocator.instance.authService.getStoredUserData();
+      final storedUser = await ServiceLocator.instance.authService
+          .getStoredUserData();
       if (mounted) {
         setState(() {
           _userProfile = storedUser ?? {};
@@ -80,32 +84,44 @@ class _MeScreenState extends State<MeScreen> {
   }
 
   String get _phoneNumber {
-    final value = _userProfile['phoneNumber'] ?? _userProfile['phone'] ?? _userProfile['mobile'];
+    final value =
+        _userProfile['phoneNumber'] ??
+        _userProfile['phone'] ??
+        _userProfile['mobile'];
     final text = value?.toString().trim();
     return text != null && text.isNotEmpty ? text : 'No phone number';
   }
 
   String get _planLabel {
-    final label = _userProfile['plan'] ?? _userProfile['accountType'] ?? _userProfile['subscription'];
+    final label =
+        _userProfile['plan'] ??
+        _userProfile['accountType'] ??
+        _userProfile['subscription'];
     final text = label?.toString().trim();
     if (text == null || text.isEmpty) return '';
     return text[0].toUpperCase() + text.substring(1);
   }
 
   double get _systemSizeKwp {
-    final value = _userProfile['systemSizeKwp'] ?? _userProfile['systemSize'] ?? 0;
+    final value =
+        _userProfile['systemSizeKwp'] ?? _userProfile['systemSize'] ?? 0;
     if (value is num) return value.toDouble();
     return double.tryParse(value.toString()) ?? 0;
   }
 
   double get _batteryCapacityKwh {
-    final value = _userProfile['batteryCapacityKwh'] ?? _userProfile['battery'] ?? 0;
+    final value =
+        _userProfile['batteryCapacityKwh'] ?? _userProfile['battery'] ?? 0;
     if (value is num) return value.toDouble();
     return double.tryParse(value.toString()) ?? 0;
   }
 
   double get _totalRevenue {
-    final value = _userProfile['totalRevenue'] ?? _userProfile['revenue'] ?? _userProfile['investmentAmount'] ?? 0;
+    final value =
+        _userProfile['totalRevenue'] ??
+        _userProfile['revenue'] ??
+        _userProfile['investmentAmount'] ??
+        0;
     if (value is num) return value.toDouble();
     return double.tryParse(value.toString()) ?? 0;
   }
@@ -115,46 +131,66 @@ class _MeScreenState extends State<MeScreen> {
       case 'FAQ':
       case 'Contact Support':
       case 'User Guide':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const HelpScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const HelpScreen()),
+        );
         break;
       case 'Notifications':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+        );
         break;
       case 'Appearance':
       case 'Language':
       case 'Privacy':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const SettingsScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SettingsScreen()),
+        );
         break;
       case 'Trends':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const TrendsScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const TrendsScreen()),
+        );
         break;
       case 'Insights':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const InsightsScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const InsightsScreen()),
+        );
         break;
       case 'Power Cut':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const PowerCutScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PowerCutScreen()),
+        );
         break;
       case 'Savings':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const SavingsScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SavingsScreen()),
+        );
         break;
       case 'Setup Inverter':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const InverterSetupScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const InverterSetupScreen()),
+        );
         break;
       case 'Wi-Fi Configuration':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const WifiConfigScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const WifiConfigScreen()),
+        );
         break;
       case 'Register ESP32':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const DeviceRegisterScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DeviceRegisterScreen()),
+        );
         break;
       case 'Share App':
         AppDialogs.showShareDialog(context);
@@ -224,7 +260,9 @@ class _MeScreenState extends State<MeScreen> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: phoneController,
-                    decoration: const InputDecoration(labelText: 'Phone Number'),
+                    decoration: const InputDecoration(
+                      labelText: 'Phone Number',
+                    ),
                     keyboardType: TextInputType.phone,
                   ),
                 ],
@@ -263,7 +301,10 @@ class _MeScreenState extends State<MeScreen> {
 
     final token = await ServiceLocator.instance.authService.getStoredToken();
     if (token == null || token.isEmpty) {
-      AppDialogs.showErrorSnackBar(context, 'Authentication required. Please login again.');
+      AppDialogs.showErrorSnackBar(
+        context,
+        'Authentication required. Please login again.',
+      );
       return;
     }
 
@@ -273,10 +314,8 @@ class _MeScreenState extends State<MeScreen> {
       if (lastName.isNotEmpty) payload['lastName'] = lastName;
       if (phoneNumber.isNotEmpty) payload['phoneNumber'] = phoneNumber;
 
-      final updatedResponse = await ServiceLocator.instance.userProfileService.updateProfile(
-        token,
-        data: payload,
-      );
+      final updatedResponse = await ServiceLocator.instance.userProfileService
+          .updateProfile(token, data: payload);
 
       final updatedProfile = updatedResponse['data'] is Map
           ? Map<String, dynamic>.from(updatedResponse['data'])
@@ -332,6 +371,7 @@ class _MeScreenState extends State<MeScreen> {
                         phoneNumber: _phoneNumber,
                         planLabel: _planLabel,
                         isLoading: _isLoadingProfile,
+                        onEdit: _openEditProfileDialog,
                       ),
                       const SizedBox(height: AppConstants.paddingMD),
                       _SystemInfoCard(
@@ -343,14 +383,26 @@ class _MeScreenState extends State<MeScreen> {
                       const _SectionLabel('Analytics & Monitoring'),
                       _MenuGroup(
                         items: const [
-                          _MenuItem(Icons.trending_up_rounded, 'Trends',
-                              'View historical data'),
-                          _MenuItem(Icons.insights_rounded, 'Insights',
-                              'Performance analysis'),
-                          _MenuItem(Icons.power_off_rounded, 'Power Cut',
-                              'Power outage tracking'),
-                          _MenuItem(Icons.savings_rounded, 'Savings',
-                              'Financial returns'),
+                          _MenuItem(
+                            Icons.trending_up_rounded,
+                            'Trends',
+                            'View historical data',
+                          ),
+                          _MenuItem(
+                            Icons.insights_rounded,
+                            'Insights',
+                            'Performance analysis',
+                          ),
+                          _MenuItem(
+                            Icons.power_off_rounded,
+                            'Power Cut',
+                            'Power outage tracking',
+                          ),
+                          _MenuItem(
+                            Icons.savings_rounded,
+                            'Savings',
+                            'Financial returns',
+                          ),
                         ],
                         onItemTap: (item) => _handleMenuTap(context, item),
                       ),
@@ -358,12 +410,21 @@ class _MeScreenState extends State<MeScreen> {
                       const _SectionLabel('System Setup'),
                       _MenuGroup(
                         items: const [
-                          _MenuItem(Icons.router_rounded, 'Setup Inverter',
-                              'Configure your inverter'),
-                          _MenuItem(Icons.memory_rounded, 'Register ESP32',
-                              'Register your device with backend'),
-                          _MenuItem(Icons.wifi_rounded, 'Wi-Fi Configuration',
-                              'Connect to network'),
+                          _MenuItem(
+                            Icons.router_rounded,
+                            'Setup Inverter',
+                            'Configure your inverter',
+                          ),
+                          _MenuItem(
+                            Icons.memory_rounded,
+                            'Register ESP32',
+                            'Register your device with backend',
+                          ),
+                          _MenuItem(
+                            Icons.wifi_rounded,
+                            'Wi-Fi Configuration',
+                            'Connect to network',
+                          ),
                         ],
                         onItemTap: (item) => _handleMenuTap(context, item),
                       ),
@@ -371,14 +432,26 @@ class _MeScreenState extends State<MeScreen> {
                       const _SectionLabel('Help & Support'),
                       _MenuGroup(
                         items: const [
-                          _MenuItem(Icons.notifications_outlined, 'Notifications',
-                              'View all alerts'),
-                          _MenuItem(Icons.help_outline_rounded, 'FAQ',
-                              'Common questions answered'),
-                          _MenuItem(Icons.chat_bubble_outline_rounded,
-                              'Contact Support', 'Get help from our team'),
-                          _MenuItem(Icons.description_outlined, 'User Guide',
-                              'How to use SolarConnect'),
+                          _MenuItem(
+                            Icons.notifications_outlined,
+                            'Notifications',
+                            'View all alerts',
+                          ),
+                          _MenuItem(
+                            Icons.help_outline_rounded,
+                            'FAQ',
+                            'Common questions answered',
+                          ),
+                          _MenuItem(
+                            Icons.chat_bubble_outline_rounded,
+                            'Contact Support',
+                            'Get help from our team',
+                          ),
+                          _MenuItem(
+                            Icons.description_outlined,
+                            'User Guide',
+                            'How to use SolarConnect',
+                          ),
                         ],
                         onItemTap: (item) => _handleMenuTap(context, item),
                       ),
@@ -386,13 +459,18 @@ class _MeScreenState extends State<MeScreen> {
                       const _SectionLabel('Settings'),
                       _MenuGroup(
                         items: [
-                          const _MenuItem(Icons.palette_outlined, 'Appearance',
-                              'Theme and display'),
+                          const _MenuItem(
+                            Icons.palette_outlined,
+                            'Appearance',
+                            'Theme and display',
+                          ),
                           // Language subtitle is dynamic
-                          _MenuItem(
-                              Icons.language_outlined, 'Language', lang),
-                          const _MenuItem(Icons.privacy_tip_outlined,
-                              'Privacy', 'Data and permissions'),
+                          _MenuItem(Icons.language_outlined, 'Language', lang),
+                          const _MenuItem(
+                            Icons.privacy_tip_outlined,
+                            'Privacy',
+                            'Data and permissions',
+                          ),
                         ],
                         onItemTap: (item) => _handleMenuTap(context, item),
                       ),
@@ -401,11 +479,21 @@ class _MeScreenState extends State<MeScreen> {
                       _MenuGroup(
                         items: const [
                           _MenuItem(
-                              Icons.share_outlined, 'Share App', 'Invite friends'),
-                          _MenuItem(Icons.star_outline_rounded, 'Rate Us',
-                              'Leave a review'),
-                          _MenuItem(Icons.logout_rounded, 'Sign Out', '',
-                              isDestructive: true),
+                            Icons.share_outlined,
+                            'Share App',
+                            'Invite friends',
+                          ),
+                          _MenuItem(
+                            Icons.star_outline_rounded,
+                            'Rate Us',
+                            'Leave a review',
+                          ),
+                          _MenuItem(
+                            Icons.logout_rounded,
+                            'Sign Out',
+                            '',
+                            isDestructive: true,
+                          ),
                         ],
                         onItemTap: (item) => _handleMenuTap(context, item),
                       ),
@@ -427,12 +515,14 @@ class _ProfileHeader extends StatelessWidget {
     required this.phoneNumber,
     required this.planLabel,
     required this.isLoading,
+    required this.onEdit,
   });
 
   final String fullName;
   final String phoneNumber;
   final String planLabel;
   final bool isLoading;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -453,10 +543,15 @@ class _ProfileHeader extends StatelessWidget {
               shape: BoxShape.circle,
               color: AppColors.primary.withValues(alpha: 0.2),
               border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.5), width: 2),
+                color: AppColors.primary.withValues(alpha: 0.5),
+                width: 2,
+              ),
             ),
-            child:
-                const Icon(Icons.person_rounded, color: AppColors.primary, size: 32),
+            child: const Icon(
+              Icons.person_rounded,
+              color: AppColors.primary,
+              size: 32,
+            ),
           ),
           const SizedBox(width: AppConstants.paddingMD),
           Expanded(
@@ -469,22 +564,27 @@ class _ProfileHeader extends StatelessWidget {
                 ),
                 Text(
                   isLoading ? 'Fetching profile...' : phoneNumber,
-                  style: AppTextStyles.bodySmall
-                      .copyWith(color: cs.onSurfaceVariant, fontSize: 12),
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: cs.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                 ),
                 if (planLabel.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.success.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       planLabel,
-                      style: AppTextStyles.labelSmall
-                          .copyWith(color: AppColors.success),
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.success,
+                      ),
                     ),
                   ),
                 ],
@@ -492,9 +592,12 @@ class _ProfileHeader extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: Icon(Icons.edit_outlined,
-                color: cs.onSurfaceVariant, size: 20),
-            onPressed: _openEditProfileDialog,
+            icon: Icon(
+              Icons.edit_outlined,
+              color: cs.onSurfaceVariant,
+              size: 20,
+            ),
+            onPressed: onEdit,
           ),
         ],
       ),
@@ -531,8 +634,7 @@ class _SystemInfoCard extends StatelessWidget {
             children: [
               Text('My System', style: AppTextStyles.headingSmall),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: AppColors.success.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
@@ -543,12 +645,17 @@ class _SystemInfoCard extends StatelessWidget {
                       width: 6,
                       height: 6,
                       decoration: const BoxDecoration(
-                          color: AppColors.success, shape: BoxShape.circle),
+                        color: AppColors.success,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                     const SizedBox(width: 4),
-                    Text('Online',
-                        style: AppTextStyles.labelSmall
-                            .copyWith(color: AppColors.success)),
+                    Text(
+                      'Online',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.success,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -557,17 +664,29 @@ class _SystemInfoCard extends StatelessWidget {
           const SizedBox(height: AppConstants.paddingMD),
           Row(
             children: [
-              _infoTile(context, Icons.solar_power_rounded,
-                  '${systemSizeKwp.toStringAsFixed(systemSizeKwp % 1 == 0 ? 0 : 1)} kWp',
-                  'System Size', AppColors.warning),
+              _infoTile(
+                context,
+                Icons.solar_power_rounded,
+                '${systemSizeKwp.toStringAsFixed(systemSizeKwp % 1 == 0 ? 0 : 1)} kWp',
+                'System Size',
+                AppColors.warning,
+              ),
               const SizedBox(width: AppConstants.paddingSM),
-              _infoTile(context, Icons.currency_rupee_rounded,
-                  '₹${totalRevenue.toStringAsFixed(0)}',
-                  'Total Revenue', AppColors.success),
+              _infoTile(
+                context,
+                Icons.currency_rupee_rounded,
+                '₹${totalRevenue.toStringAsFixed(0)}',
+                'Total Revenue',
+                AppColors.success,
+              ),
               const SizedBox(width: AppConstants.paddingSM),
-              _infoTile(context, Icons.battery_full_rounded,
-                  '${batteryCapacityKwh.toStringAsFixed(batteryCapacityKwh % 1 == 0 ? 0 : 1)} kWh',
-                  'Battery', AppColors.info),
+              _infoTile(
+                context,
+                Icons.battery_full_rounded,
+                '${batteryCapacityKwh.toStringAsFixed(batteryCapacityKwh % 1 == 0 ? 0 : 1)} kWh',
+                'Battery',
+                AppColors.info,
+              ),
             ],
           ),
         ],
@@ -575,39 +694,43 @@ class _SystemInfoCard extends StatelessWidget {
     );
   }
 
-  Widget _infoTile(BuildContext context, IconData icon, String value,
-          String label, Color color) =>
-      Expanded(
-        child: Container(
-          padding: const EdgeInsets.all(AppConstants.paddingSM),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-            border: Border.all(color: color.withValues(alpha: 0.2)),
+  Widget _infoTile(
+    BuildContext context,
+    IconData icon,
+    String value,
+    String label,
+    Color color,
+  ) => Expanded(
+    child: Container(
+      padding: const EdgeInsets.all(AppConstants.paddingSM),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Icon(icon, color: color, size: 18),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.labelSmall.copyWith(fontSize: 10),
-              ),
-            ],
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.labelSmall.copyWith(fontSize: 10),
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }
 
 class _SectionLabel extends StatelessWidget {
@@ -618,10 +741,13 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(text.toUpperCase(),
-          style: AppTextStyles.labelSmall.copyWith(
-              letterSpacing: 1.2,
-              color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      child: Text(
+        text.toUpperCase(),
+        style: AppTextStyles.labelSmall.copyWith(
+          letterSpacing: 1.2,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
     );
   }
 }
@@ -631,8 +757,12 @@ class _MenuItem {
   final String title;
   final String subtitle;
   final bool isDestructive;
-  const _MenuItem(this.icon, this.title, this.subtitle,
-      {this.isDestructive = false});
+  const _MenuItem(
+    this.icon,
+    this.title,
+    this.subtitle, {
+    this.isDestructive = false,
+  });
 }
 
 class _MenuGroup extends StatelessWidget {
@@ -669,19 +799,23 @@ class _MenuGroup extends StatelessWidget {
                   onTap: () => onItemTap(item.title),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: AppConstants.paddingMD, vertical: 12),
+                      horizontal: AppConstants.paddingMD,
+                      vertical: 12,
+                    ),
                     child: Row(
                       children: [
                         Container(
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: (item.isDestructive
-                                    ? AppColors.error
-                                    : AppColors.primary)
-                                .withValues(alpha: 0.12),
-                            borderRadius:
-                                BorderRadius.circular(AppConstants.radiusSM),
+                            color:
+                                (item.isDestructive
+                                        ? AppColors.error
+                                        : AppColors.primary)
+                                    .withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(
+                              AppConstants.radiusSM,
+                            ),
                           ),
                           child: Icon(
                             item.icon,
@@ -705,15 +839,21 @@ class _MenuGroup extends StatelessWidget {
                                 ),
                               ),
                               if (item.subtitle.isNotEmpty)
-                                Text(item.subtitle,
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                        color: cs.onSurfaceVariant)),
+                                Text(
+                                  item.subtitle,
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: cs.onSurfaceVariant,
+                                  ),
+                                ),
                             ],
                           ),
                         ),
                         if (!item.isDestructive)
-                          Icon(Icons.chevron_right_rounded,
-                              color: cs.onSurfaceVariant, size: 20),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: cs.onSurfaceVariant,
+                            size: 20,
+                          ),
                       ],
                     ),
                   ),
