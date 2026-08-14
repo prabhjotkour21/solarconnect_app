@@ -15,7 +15,7 @@ class TrendsScreen extends StatefulWidget {
 
 class _TrendsScreenState extends State<TrendsScreen> {
   List<TrendDataPoint> _data = [];
-  _Filter _filter = _Filter.today; // default = today
+  _Filter _filter = _Filter.weekly; // default = weekly (shows historical data)
   DateTimeRange? _customRange;
   bool _isLoading = true;
   String? _errorMessage;
@@ -32,9 +32,9 @@ class _TrendsScreenState extends State<TrendsScreen> {
   String get _filterLabel {
     switch (_filter) {
       case _Filter.today:   return 'Today';
-      case _Filter.weekly:  return 'Weekly';
-      case _Filter.monthly: return 'Monthly';
-      case _Filter.yearly:  return 'Yearly';
+      case _Filter.weekly:  return 'Last 7 Days';
+      case _Filter.monthly: return 'Last 30 Days';
+      case _Filter.yearly:  return 'Last Year';
       case _Filter.custom:
         if (_customRange != null) {
           return '${_customRange!.start.day}/${_customRange!.start.month}'
@@ -286,14 +286,17 @@ class _TrendsScreenState extends State<TrendsScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          // Reset to Today
+          // Reset to Weekly
           IconButton(
-            tooltip: 'Reset to Today',
+            tooltip: 'Reset to Weekly',
             icon: Icon(Icons.restore_rounded, color: AppColors.primary),
-            onPressed: () => setState(() {
-              _filter = _Filter.today;
-              _customRange = null;
-            }),
+            onPressed: () async {
+              setState(() {
+                _filter = _Filter.weekly;
+                _customRange = null;
+              });
+              await _loadTrendData();
+            },
           ),
           // Filter icon
           GestureDetector(
