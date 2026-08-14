@@ -35,20 +35,20 @@ class EnergyReading {
     required this.gridExportTodayKwh,
   });
 
-  /// Returns a demo reading with realistic-looking values.
-  /// Used during development before a real API is connected.
-  factory EnergyReading.demo() => EnergyReading(
+  /// Default zero state used when no real dashboard data is available.
+  /// The app should not show fabricated values in production.
+  factory EnergyReading.empty() => EnergyReading(
         timestamp: DateTime.now(),
-        solarPowerW: 3450,
-        consumptionPowerW: 1820,
-        batteryPowerW: 800,
-        gridPowerW: -830, // negative = exporting to grid
-        batteryPercent: 72,
-        batteryCharging: true,
-        solarTodayKwh: 18.4,
-        consumptionTodayKwh: 9.2,
-        gridImportTodayKwh: 0.3,
-        gridExportTodayKwh: 6.1,
+        solarPowerW: 0,
+        consumptionPowerW: 0,
+        batteryPowerW: 0,
+        gridPowerW: 0,
+        batteryPercent: 0,
+        batteryCharging: false,
+        solarTodayKwh: 0,
+        consumptionTodayKwh: 0,
+        gridImportTodayKwh: 0,
+        gridExportTodayKwh: 0,
       );
 
   factory EnergyReading.fromDashboardOverview(Map<String, dynamic> overview) {
