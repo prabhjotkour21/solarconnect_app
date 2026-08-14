@@ -269,9 +269,11 @@ class _TrendsScreenState extends State<TrendsScreen> {
   @override
   Widget build(BuildContext context) {
     final data = _dataPoints;
-    final maxVal = data.isNotEmpty
+    final hasData = data.isNotEmpty;
+    final maxVal = hasData
         ? data.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2
         : 1.0;
+    final rangeLabel = hasData ? '${data.first.label} – ${data.last.label}' : 'No data';
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -342,167 +344,165 @@ class _TrendsScreenState extends State<TrendsScreen> {
                   child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
-            // ── Solar Generation chart ───────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.fromLTRB(8, 14, 12, 10),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceDark,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.bolt_rounded,
-                          color: AppColors.primary, size: 18),
-                      const SizedBox(width: 6),
-                      Text('Solar Generation',
-                          style: AppTextStyles.headingSmall),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${data.first.label} – ${data.last.label}',
-                    style: AppTextStyles.labelSmall
-                        .copyWith(color: AppColors.textSecondary),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildBarChart(
-                    data: data,
-                    getValue: (p) => p.value,
-                    yMax: maxVal,
-                    yAxisLabel: 'Power (kW)',
-                    xAxisLabel: _xAxisLabel,
-                    valueFormat: (v) => v.toStringAsFixed(1),
-                    barColor: AppColors.primary,
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _StatTile(
-                          label: 'Total',
-                          value: '${_totalGeneration.toStringAsFixed(2)} kWh',
-                          icon: Icons.bolt_rounded,
-                          color: AppColors.primary,
-                        ),
-                        _StatTile(
-                          label: 'Max',
-                          value:
-                              '${data.map((e) => e.value).reduce((a, b) => a > b ? a : b).toStringAsFixed(2)} kW',
-                          icon: Icons.trending_up_rounded,
-                          color: AppColors.warning,
-                        ),
-                        _StatTile(
-                          label: 'Avg',
-                          value:
-                              '${(data.map((e) => e.value).reduce((a, b) => a + b) / data.length).toStringAsFixed(2)} kW',
-                          icon: Icons.equalizer_rounded,
-                          color: AppColors.success,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // ── Sunlight Hours chart ─────────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.fromLTRB(8, 14, 12, 10),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceDark,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.wb_sunny_rounded,
-                          color: AppColors.warning, size: 18),
-                      const SizedBox(width: 6),
-                      Text('Sunlight Hours',
-                          style: AppTextStyles.headingSmall),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${data.first.label} – ${data.last.label}',
-                    style: AppTextStyles.labelSmall
-                        .copyWith(color: AppColors.textSecondary),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildSunlightChart(data),
-                  const SizedBox(height: 16),
-                  // Sunlight stats
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.warning.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _StatTile(
-                          label: 'Avg / Period',
-                          value:
-                              '${(data.map((p) => p.sunlightHours).reduce((a, b) => a + b) / data.length).toStringAsFixed(1)} hrs',
-                          icon: Icons.wb_sunny_rounded,
-                          color: AppColors.warning,
-                        ),
-                        _StatTile(
-                          label: 'Peak',
-                          value:
-                              '${data.map((p) => p.sunlightHours).reduce((a, b) => a > b ? a : b).toStringAsFixed(1)} hrs',
-                          icon: Icons.light_mode_rounded,
-                          color: const Color(0xFFFF6D00),
-                        ),
-                        _StatTile(
-                          label: 'Total',
-                          value:
-                              '${data.map((p) => p.sunlightHours).reduce((a, b) => a + b).toStringAsFixed(1)} hrs',
-                          icon: Icons.calendar_today_rounded,
-                          color: AppColors.primary,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // ── Detailed table ───────────────────────────────────────────────
-            Text('Detailed Data', style: AppTextStyles.headingMedium),
-            const SizedBox(height: 12),
-            if (data.isEmpty)
+            if (!hasData)
               Container(
-                margin: const EdgeInsets.symmetric(vertical: 16),
-                padding: const EdgeInsets.all(16),
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceDark,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Center(
-                  child: Text(
-                    'No trend data available for the selected range.',
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                child: Text(
+                  'No trend data available for the selected range.',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
               )
-            else
+            else ...[
+              // ── Solar Generation chart ───────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.fromLTRB(8, 14, 12, 10),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceDark,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.bolt_rounded,
+                            color: AppColors.primary, size: 18),
+                        const SizedBox(width: 6),
+                        Text('Solar Generation',
+                            style: AppTextStyles.headingSmall),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      rangeLabel,
+                      style: AppTextStyles.labelSmall
+                          .copyWith(color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildBarChart(
+                      data: data,
+                      getValue: (p) => p.value,
+                      yMax: maxVal,
+                      yAxisLabel: 'Power (kW)',
+                      xAxisLabel: _xAxisLabel,
+                      valueFormat: (v) => v.toStringAsFixed(1),
+                      barColor: AppColors.primary,
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _StatTile(
+                            label: 'Total',
+                            value: '${_totalGeneration.toStringAsFixed(2)} kWh',
+                            icon: Icons.bolt_rounded,
+                            color: AppColors.primary,
+                          ),
+                          _StatTile(
+                            label: 'Max',
+                            value:
+                                '${data.map((e) => e.value).reduce((a, b) => a > b ? a : b).toStringAsFixed(2)} kW',
+                            icon: Icons.trending_up_rounded,
+                            color: AppColors.warning,
+                          ),
+                          _StatTile(
+                            label: 'Avg',
+                            value:
+                                '${(data.map((e) => e.value).reduce((a, b) => a + b) / data.length).toStringAsFixed(2)} kW',
+                            icon: Icons.equalizer_rounded,
+                            color: AppColors.success,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // ── Sunlight Hours chart ─────────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.fromLTRB(8, 14, 12, 10),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceDark,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.wb_sunny_rounded,
+                            color: AppColors.warning, size: 18),
+                        const SizedBox(width: 6),
+                        Text('Sunlight Hours',
+                            style: AppTextStyles.headingSmall),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      rangeLabel,
+                      style: AppTextStyles.labelSmall
+                          .copyWith(color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSunlightChart(data),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.warning.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _StatTile(
+                            label: 'Avg / Period',
+                            value:
+                                '${(data.map((p) => p.sunlightHours).reduce((a, b) => a + b) / data.length).toStringAsFixed(1)} hrs',
+                            icon: Icons.wb_sunny_rounded,
+                            color: AppColors.warning,
+                          ),
+                          _StatTile(
+                            label: 'Peak',
+                            value:
+                                '${data.map((p) => p.sunlightHours).reduce((a, b) => a > b ? a : b).toStringAsFixed(1)} hrs',
+                            icon: Icons.light_mode_rounded,
+                            color: const Color(0xFFFF6D00),
+                          ),
+                          _StatTile(
+                            label: 'Total',
+                            value:
+                                '${data.map((p) => p.sunlightHours).reduce((a, b) => a + b).toStringAsFixed(1)} hrs',
+                            icon: Icons.calendar_today_rounded,
+                            color: AppColors.primary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // ── Detailed table ───────────────────────────────────────────────
+              Text('Detailed Data', style: AppTextStyles.headingMedium),
+              const SizedBox(height: 12),
               ...data.map((point) => Container(
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.all(12),
@@ -511,39 +511,40 @@ class _TrendsScreenState extends State<TrendsScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
-                    children: [
-                      SizedBox(
-                        width: 48,
-                        child: Text(point.label,
-                            style: AppTextStyles.labelSmall
-                                .copyWith(color: AppColors.textPrimary)),
-                      ),
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: maxVal > 0 ? point.value / maxVal : 0,
-                            minHeight: 6,
-                            backgroundColor:
-                                AppColors.primary.withValues(alpha: 0.1),
-                            valueColor:
-                                AlwaysStoppedAnimation(AppColors.success),
+                      children: [
+                        SizedBox(
+                          width: 48,
+                          child: Text(point.label,
+                              style: AppTextStyles.labelSmall
+                                  .copyWith(color: AppColors.textPrimary)),
+                        ),
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: maxVal > 0 ? point.value / maxVal : 0,
+                              minHeight: 6,
+                              backgroundColor:
+                                  AppColors.primary.withValues(alpha: 0.1),
+                              valueColor:
+                                  AlwaysStoppedAnimation(AppColors.success),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 60,
-                        child: Text(
-                          '${point.value.toStringAsFixed(2)} kW',
-                          style: AppTextStyles.labelSmall
-                              .copyWith(color: AppColors.textSecondary),
-                          textAlign: TextAlign.right,
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          width: 60,
+                          child: Text(
+                            '${point.value.toStringAsFixed(2)} kW',
+                            style: AppTextStyles.labelSmall
+                                .copyWith(color: AppColors.textSecondary),
+                            textAlign: TextAlign.right,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                )),
+                      ],
+                    ),
+                  )),
+            ],
           ],
         ),
       ),
