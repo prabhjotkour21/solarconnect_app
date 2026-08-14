@@ -20,7 +20,7 @@ class OverviewScreen extends StatefulWidget {
 }
 
 class _OverviewScreenState extends State<OverviewScreen> {
-  EnergyReading _reading = EnergyReading.demo();
+  EnergyReading _reading = EnergyReading.empty();
   bool _isLoading = true;
   String? _errorMessage;
   List<dynamic> _weeklySummary = [];
