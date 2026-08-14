@@ -144,23 +144,26 @@ class _OverviewScreenState extends State<OverviewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  _errorMessage!,
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.headingSmall.copyWith(
-                    color: AppColors.error,
+      body: SafeArea(
+        top: true,
+        bottom: true,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _errorMessage != null
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    _errorMessage!,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.headingSmall.copyWith(
+                      color: AppColors.error,
+                    ),
                   ),
                 ),
-              ),
-            )
-          : CustomScrollView(
-              slivers: [
+              )
+            : CustomScrollView(
+                slivers: [
                 SliverAppBar(
                   expandedHeight: 100,
                   floating: true,
