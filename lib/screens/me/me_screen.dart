@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../main.dart';
+import '../../services/service_locator.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../utils/app_constants.dart';
@@ -15,8 +16,99 @@ import '../inverter_setup_screen.dart';
 import '../wifi_config_screen.dart';
 import '../device_register_screen.dart';
 
-class MeScreen extends StatelessWidget {
+class MeScreen extends StatefulWidget {
   const MeScreen({super.key});
+
+  @override
+  State<MeScreen> createState() => _MeScreenState();
+}
+
+class _MeScreenState extends State<MeScreen> {
+  Map<String, dynamic> _userProfile = {};
+  bool _isLoadingProfile = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      final storedUser = await ServiceLocator.instance.authService.getStoredUserData();
+      if (mounted) {
+        setState(() {
+          _userProfile = storedUser ?? {};
+          _isLoadingProfile = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      final response = await ServiceLocator.instance.authService.getMe(token);
+      final profile = response['data'] is Map ? Map<String, dynamic>.from(response['data']) : response;
+      if (mounted) {
+        setState(() {
+          _userProfile = profile;
+          _isLoadingProfile = false;
+        });
+      }
+    } catch (_) {
+      final storedUser = await ServiceLocator.instance.authService.getStoredUserData();
+      if (mounted) {
+        setState(() {
+          _userProfile = storedUser ?? {};
+          _isLoadingProfile = false;
+        });
+      }
+    }
+  }
+
+  String get _fullName {
+    final first = _userProfile['firstName']?.toString().trim();
+    final last = _userProfile['lastName']?.toString().trim();
+    if (first != null && first.isNotEmpty && last != null && last.isNotEmpty) {
+      return '$first $last';
+    }
+    if (first != null && first.isNotEmpty) return first;
+    if (last != null && last.isNotEmpty) return last;
+    final name = _userProfile['name']?.toString().trim();
+    if (name != null && name.isNotEmpty) return name;
+    return 'User';
+  }
+
+  String get _phoneNumber {
+    final value = _userProfile['phoneNumber'] ?? _userProfile['phone'] ?? _userProfile['mobile'];
+    final text = value?.toString().trim();
+    return text != null && text.isNotEmpty ? text : 'No phone number';
+  }
+
+  String get _planLabel {
+    final label = _userProfile['plan'] ?? _userProfile['accountType'] ?? _userProfile['subscription'];
+    final text = label?.toString().trim();
+    if (text == null || text.isEmpty) return '';
+    return text[0].toUpperCase() + text.substring(1);
+  }
+
+  double get _systemSizeKwp {
+    final value = _userProfile['systemSizeKwp'] ?? _userProfile['systemSize'] ?? 0;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString()) ?? 0;
+  }
+
+  double get _batteryCapacityKwh {
+    final value = _userProfile['batteryCapacityKwh'] ?? _userProfile['battery'] ?? 0;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString()) ?? 0;
+  }
+
+  double get _totalRevenue {
+    final value = _userProfile['totalRevenue'] ?? _userProfile['revenue'] ?? _userProfile['investmentAmount'] ?? 0;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString()) ?? 0;
+  }
 
   void _handleMenuTap(BuildContext context, String item) {
     switch (item) {
@@ -110,9 +202,18 @@ class MeScreen extends StatelessWidget {
                   ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      const _ProfileHeader(),
+                      _ProfileHeader(
+                        fullName: _fullName,
+                        phoneNumber: _phoneNumber,
+                        planLabel: _planLabel,
+                        isLoading: _isLoadingProfile,
+                      ),
                       const SizedBox(height: AppConstants.paddingMD),
-                      const _SystemInfoCard(),
+                      _SystemInfoCard(
+                        systemSizeKwp: _systemSizeKwp,
+                        totalRevenue: _totalRevenue,
+                        batteryCapacityKwh: _batteryCapacityKwh,
+                      ),
                       const SizedBox(height: AppConstants.paddingMD),
                       const _SectionLabel('Analytics & Monitoring'),
                       _MenuGroup(
@@ -196,7 +297,17 @@ class MeScreen extends StatelessWidget {
 }
 
 class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader();
+  const _ProfileHeader({
+    required this.fullName,
+    required this.phoneNumber,
+    required this.planLabel,
+    required this.isLoading,
+  });
+
+  final String fullName;
+  final String phoneNumber;
+  final String planLabel;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -227,22 +338,31 @@ class _ProfileHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Alex Johnson', style: AppTextStyles.headingSmall),
-                Text('+91 98765 43210',
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: cs.onSurfaceVariant, fontSize: 12)),
-                const SizedBox(height: 4),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.success.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text('Premium',
-                      style: AppTextStyles.labelSmall
-                          .copyWith(color: AppColors.success)),
+                Text(
+                  isLoading ? 'Loading...' : fullName,
+                  style: AppTextStyles.headingSmall,
                 ),
+                Text(
+                  isLoading ? 'Fetching profile...' : phoneNumber,
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: cs.onSurfaceVariant, fontSize: 12),
+                ),
+                if (planLabel.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      planLabel,
+                      style: AppTextStyles.labelSmall
+                          .copyWith(color: AppColors.success),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -258,7 +378,15 @@ class _ProfileHeader extends StatelessWidget {
 }
 
 class _SystemInfoCard extends StatelessWidget {
-  const _SystemInfoCard();
+  const _SystemInfoCard({
+    required this.systemSizeKwp,
+    required this.totalRevenue,
+    required this.batteryCapacityKwh,
+  });
+
+  final double systemSizeKwp;
+  final double totalRevenue;
+  final double batteryCapacityKwh;
 
   @override
   Widget build(BuildContext context) {
@@ -304,13 +432,16 @@ class _SystemInfoCard extends StatelessWidget {
           const SizedBox(height: AppConstants.paddingMD),
           Row(
             children: [
-              _infoTile(context, Icons.solar_power_rounded, '10 kWp',
+              _infoTile(context, Icons.solar_power_rounded,
+                  '${systemSizeKwp.toStringAsFixed(systemSizeKwp % 1 == 0 ? 0 : 1)} kWp',
                   'System Size', AppColors.warning),
               const SizedBox(width: AppConstants.paddingSM),
-              _infoTile(context, Icons.currency_rupee_rounded, '₹1,450',
+              _infoTile(context, Icons.currency_rupee_rounded,
+                  '₹${totalRevenue.toStringAsFixed(0)}',
                   'Total Revenue', AppColors.success),
               const SizedBox(width: AppConstants.paddingSM),
-              _infoTile(context, Icons.battery_full_rounded, '13.5 kWh',
+              _infoTile(context, Icons.battery_full_rounded,
+                  '${batteryCapacityKwh.toStringAsFixed(batteryCapacityKwh % 1 == 0 ? 0 : 1)} kWh',
                   'Battery', AppColors.info),
             ],
           ),
