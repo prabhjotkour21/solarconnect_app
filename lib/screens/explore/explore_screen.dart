@@ -28,8 +28,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
-      body: CustomScrollView(
-        slivers: [
+      body: SafeArea(
+        top: true,
+        bottom: true,
+        child: CustomScrollView(
+          slivers: [
           SliverAppBar(
             floating: true,
             snap: true,
