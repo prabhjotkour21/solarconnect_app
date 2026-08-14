@@ -24,7 +24,11 @@ class _ShellScreenState extends State<ShellScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
-      body: IndexedStack(index: _index, children: _screens),
+      body: SafeArea(
+        top: true,
+        bottom: true,
+        child: IndexedStack(index: _index, children: _screens),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
