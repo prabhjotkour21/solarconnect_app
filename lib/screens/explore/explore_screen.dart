@@ -16,7 +16,13 @@ class ExploreScreen extends StatefulWidget {
 
 class _ExploreScreenState extends State<ExploreScreen> {
   int _selectedCategory = 0;
-  final _categories = ['All', 'Tips & Tricks', 'Finance', 'Maintenance', 'Education'];
+  final _categories = [
+    'All',
+    'Tips & Tricks',
+    'Finance',
+    'Maintenance',
+    'Education',
+  ];
 
   List<ExploreArticle> get _filtered {
     if (_selectedCategory == 0) return ExploreArticle.demoArticles;
@@ -33,45 +39,47 @@ class _ExploreScreenState extends State<ExploreScreen> {
         bottom: true,
         child: CustomScrollView(
           slivers: [
-          SliverAppBar(
-            floating: true,
-            snap: true,
-            backgroundColor: AppColors.backgroundDark,
-            title: Text('Explore', style: AppTextStyles.headingMedium),
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(50),
-              child: _CategoryChips(
-                categories: _categories,
-                selected: _selectedCategory,
-                onSelected: (i) => setState(() => _selectedCategory = i),
+            SliverAppBar(
+              floating: true,
+              snap: true,
+              backgroundColor: AppColors.backgroundDark,
+              title: Text('Explore', style: AppTextStyles.headingMedium),
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(50),
+                child: _CategoryChips(
+                  categories: _categories,
+                  selected: _selectedCategory,
+                  onSelected: (i) => setState(() => _selectedCategory = i),
+                ),
               ),
             ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              AppConstants.paddingMD,
-              AppConstants.paddingMD,
-              AppConstants.paddingMD,
-              AppConstants.paddingXL,
-            ),
-            sliver: SliverList.builder(
-              itemCount: _filtered.length,
-              itemBuilder: (_, i) => GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ArticleDetailScreen(
-                        article: _filtered[i],
-                      ),
-                    ),
-                  );
-                },
-                child: ArticleCard(article: _filtered[i]),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppConstants.paddingMD,
+                AppConstants.paddingMD,
+                AppConstants.paddingMD,
+                AppConstants.paddingXL,
+              ),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, i) => GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              ArticleDetailScreen(article: _filtered[i]),
+                        ),
+                      );
+                    },
+                    child: ArticleCard(article: _filtered[i]),
+                  ),
+                  childCount: _filtered.length,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -95,7 +103,9 @@ class _CategoryChips extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(
-            horizontal: AppConstants.paddingMD, vertical: 8),
+          horizontal: AppConstants.paddingMD,
+          vertical: 8,
+        ),
         itemCount: categories.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (_, i) {
