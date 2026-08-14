@@ -170,8 +170,22 @@ class _MeScreenState extends State<MeScreen> {
 
   void _handleLogout(BuildContext context) async {
     final confirmed = await AppDialogs.showLogoutDialog(context);
-    if (confirmed == true && context.mounted) {
+    if (confirmed != true) return;
+
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token != null && token.isNotEmpty) {
+      try {
+        await ServiceLocator.instance.authService.logout(token);
+      } catch (_) {
+        // Even if backend logout fails, we still clear local session.
+      }
+    }
+
+    await ServiceLocator.instance.authService.clearStoredAuth();
+
+    if (context.mounted) {
       AppDialogs.showSuccessSnackBar(context, 'Signed out successfully');
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
     }
   }
 
