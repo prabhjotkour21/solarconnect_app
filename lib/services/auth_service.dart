@@ -1,4 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart' show debugPrint;
 
 import '../utils/app_constants.dart';
@@ -38,6 +40,28 @@ class AuthService {
     return _apiService.get('/auth/me', token: token);
   }
 
+  Future<Map<String, dynamic>?> getStoredUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(AppConstants.userDataKey);
+    if (raw == null || raw.isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
+    } catch (_) {
+      return null;
+    }
+
+    return null;
+  }
+
   Future<String?> getStoredToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(AppConstants.authTokenKey);
@@ -73,7 +97,8 @@ class AuthService {
     }
 
     if (userData != null) {
-      await prefs.setString(AppConstants.userDataKey, userData is String ? userData : response.toString());
+      final encoded = jsonEncode(userData is Map ? userData : {'data': userData});
+      await prefs.setString(AppConstants.userDataKey, encoded);
     }
   }
 }
