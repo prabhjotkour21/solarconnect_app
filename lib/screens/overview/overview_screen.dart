@@ -22,6 +22,7 @@ class OverviewScreen extends StatefulWidget {
 class _OverviewScreenState extends State<OverviewScreen> {
   EnergyReading _reading = EnergyReading.empty();
   bool _isLoading = true;
+  bool _isRefreshing = false;
   String? _errorMessage;
   List<dynamic> _weeklySummary = [];
   Map<String, dynamic>? _dashboardMetrics;
@@ -43,11 +44,19 @@ class _OverviewScreenState extends State<OverviewScreen> {
   }
 
   Future<void> _loadDashboardData() async {
+    setState(() {
+      if (!_isRefreshing) {
+        _isLoading = true;
+      }
+      _errorMessage = null;
+    });
+
     final token = await ServiceLocator.instance.authService.getStoredToken();
     if (token == null || token.isEmpty) {
       setState(() {
         _errorMessage = 'Authentication token not found. Please login again.';
         _isLoading = false;
+        _isRefreshing = false;
       });
       return;
     }
@@ -72,12 +81,24 @@ class _OverviewScreenState extends State<OverviewScreen> {
         _dailySummary = dailySummary;
         _energyStatistics = statistics;
         _isLoading = false;
+        _isRefreshing = false;
       });
     } catch (e) {
       setState(() {
         _errorMessage = e.toString();
         _isLoading = false;
+        _isRefreshing = false;
       });
+    }
+  }
+
+  Future<void> _refreshOverview() async {
+    setState(() {
+      _isRefreshing = true;
+    });
+    await _loadDashboardData();
+    if (mounted && ServiceLocator.instance.authService.getStoredToken() != null) {
+      _connectSocket();
     }
   }
 
@@ -145,6 +166,12 @@ class _OverviewScreenState extends State<OverviewScreen> {
                   floating: true,
                   snap: true,
                   backgroundColor: AppColors.backgroundDark,
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.refresh, size: 20),
+                      onPressed: _refreshOverview,
+                    ),
+                  ],
                   flexibleSpace: FlexibleSpaceBar(
                     titlePadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     title: Row(
