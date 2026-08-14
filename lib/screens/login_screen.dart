@@ -18,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController(text: 'test@gmail.com');
   final _passwordController = TextEditingController(text: '12345678');
   bool _isLoading = false;
+  bool _showPassword = false;
   String? _errorMessage;
 
   @override
@@ -124,17 +125,28 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _passwordController,
-                      obscureText: true,
+                      obscureText: !_showPassword,
                       style: const TextStyle(color: Colors.black87),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Password',
                         hintText: 'Enter your password',
-                        labelStyle: TextStyle(color: AppColors.textSecondary),
-                        hintStyle: TextStyle(color: AppColors.textSecondary),
+                        labelStyle: const TextStyle(color: AppColors.textSecondary),
+                        hintStyle: const TextStyle(color: AppColors.textSecondary),
                         filled: true,
-                        fillColor: Color(0xFFF4F6F9),
-                        border: OutlineInputBorder(
+                        fillColor: const Color(0xFFF4F6F9),
+                        border: const OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(12)),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _showPassword ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                            color: AppColors.textSecondary,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _showPassword = !_showPassword;
+                            });
+                          },
                         ),
                       ),
                       validator: (value) => value == null || value.isEmpty ? 'Enter password' : null,
