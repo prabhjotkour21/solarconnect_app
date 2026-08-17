@@ -62,9 +62,14 @@ class _MeScreenState extends State<MeScreen> {
       
       try {
         final invertersResponse = await ServiceLocator.instance.inverterService.getInverters(token);
-        final invertersList = invertersResponse['data'] is List
-            ? List<dynamic>.from(invertersResponse['data'] as List)
-            : [];
+        
+        // Backend returns array directly, not wrapped in 'data'
+        List<dynamic> invertersList = [];
+        if (invertersResponse is List) {
+          invertersList = List<dynamic>.from(invertersResponse);
+        } else if (invertersResponse is Map && invertersResponse['data'] is List) {
+          invertersList = List<dynamic>.from(invertersResponse['data'] as List);
+        }
         
         if (invertersList.isNotEmpty) {
           primaryInverter = Map<String, dynamic>.from(invertersList.first as Map<String, dynamic>);
