@@ -86,9 +86,9 @@ class _TrendsScreenState extends State<TrendsScreen> {
         final label = item['label']?.toString() ?? '';
         return TrendDataPoint(
           time: DateTime.tryParse(label) ?? DateTime.now(),
-          value: _toDouble(item['generated'] ?? item['value']),
+          value: _toDouble(item['generated'] ?? item['value'] ?? item['solarGenerated']),
           label: label,
-          sunlightHours: _toDouble(item['sunlightHours']),
+          sunlightHours: _toDouble(item['sunlightHours'] ?? item['sunlight_hours'] ?? 0.0),
         );
       }).toList();
 
