@@ -37,7 +37,10 @@ class _MeScreenState extends State<MeScreen> {
 
   Future<void> _loadUserProfile() async {
     final token = await ServiceLocator.instance.authService.getStoredToken();
+    print('[ME_SCREEN] Starting _loadUserProfile() | token: ${token != null ? token.substring(0, 20) + '...' : 'NULL'}');
+    
     if (token == null || token.isEmpty) {
+      print('[ME_SCREEN] Token is null/empty, loading from storage');
       final storedUser = await ServiceLocator.instance.authService
           .getStoredUserData();
       if (mounted) {
@@ -50,27 +53,44 @@ class _MeScreenState extends State<MeScreen> {
     }
 
     try {
+      print('[ME_SCREEN] Fetching user profile...');
       // Load user profile
       final response = await ServiceLocator.instance.authService.getMe(token);
       final profile = response['data'] is Map
           ? Map<String, dynamic>.from(response['data'])
           : response;
+      print('[ME_SCREEN] User profile loaded: ${profile['email']}');
 
       // Load inverters
       Map<String, dynamic>? primaryInverter;
       String status = 'offline';
       
       try {
+        print('[ME_SCREEN] Calling inverterService.getInverters()...');
         final invertersResponse = await ServiceLocator.instance.inverterService.getInverters(token);
+        print('[ME_SCREEN] Inverters response type: ${invertersResponse.runtimeType}');
+        print('[ME_SCREEN] Inverters response: $invertersResponse');
         
-        // Backend returns array directly, not wrapped in 'data'
+        // Backend now wraps in { success, data, total }
         List<dynamic> invertersList = [];
         if (invertersResponse is List) {
+          // Direct array response
+          print('[ME_SCREEN] Response is List with ${(invertersResponse as List).length} items');
           invertersList = List<dynamic>.from(invertersResponse);
-        } else if (invertersResponse is Map && invertersResponse['data'] is List) {
-          invertersList = List<dynamic>.from(invertersResponse['data'] as List);
+        } else if (invertersResponse is Map) {
+          print('[ME_SCREEN] Response is Map with keys: ${(invertersResponse as Map).keys.join(', ')}');
+          if (invertersResponse['data'] is List) {
+            // Wrapped in data field
+            print('[ME_SCREEN] Found data field with List, length: ${(invertersResponse['data'] as List).length}');
+            invertersList = List<dynamic>.from(invertersResponse['data'] as List);
+          } else if (invertersResponse['success'] == true && invertersResponse.containsKey('data')) {
+            // Response format: { success, data, total }
+            print('[ME_SCREEN] Found success response with data field');
+            invertersList = List<dynamic>.from(invertersResponse['data'] as List? ?? []);
+          }
         }
         
+        print('[ME_SCREEN] Final invertersList length: ${invertersList.length}');
         if (invertersList.isNotEmpty) {
           primaryInverter = Map<String, dynamic>.from(invertersList.first as Map<String, dynamic>);
           
@@ -79,14 +99,27 @@ class _MeScreenState extends State<MeScreen> {
           if (inverterId != null && inverterId.isNotEmpty) {
             try {
               final statusResponse = await ServiceLocator.instance.inverterService.getInverterStatus(inverterId, token);
-              status = statusResponse['status']?.toString() ?? primaryInverter['status']?.toString() ?? 'offline';
-            } catch (_) {
+              
+              // Handle status response: { id, connectionStatus, status, ... }
+              if (statusResponse is Map) {
+                // Prefer connectionStatus (online/offline) over status
+                status = statusResponse['connectionStatus']?.toString() ?? 
+                         statusResponse['status']?.toString() ?? 
+                         primaryInverter['status']?.toString() ?? 
+                         'offline';
+              } else if (statusResponse is String) {
+                status = statusResponse;
+              } else {
+                status = primaryInverter['status']?.toString() ?? 'offline';
+              }
+            } catch (e) {
               status = primaryInverter['status']?.toString() ?? 'offline';
             }
           }
         }
-      } catch (_) {
+      } catch (e) {
         // If inverters fail to load, continue with just user profile
+        print('[ME_SCREEN] Error loading inverters: $e');
       }
 
       if (mounted) {
@@ -96,6 +129,7 @@ class _MeScreenState extends State<MeScreen> {
           _inverterStatus = status;
           _isLoadingProfile = false;
         });
+        print('[ME_SCREEN] Updated state: inverterStatus=$status, systemSize=${_systemSizeKwp}, battery=${_batteryCapacityKwh}, revenue=${_totalRevenue}');
       }
     } catch (_) {
       final storedUser = await ServiceLocator.instance.authService
@@ -176,6 +210,10 @@ class _MeScreenState extends State<MeScreen> {
   }
 
   bool get _isSystemOnline {
+    // connectionStatus: 'online' or 'offline' from inverter status API
+    if (_inverterStatus.toLowerCase() == 'online') return true;
+    
+    // Fallback to status field if connectionStatus not available
     final status = _inverterStatus.toLowerCase();
     return status == 'active' || status == 'online' || status == 'success';
   }
