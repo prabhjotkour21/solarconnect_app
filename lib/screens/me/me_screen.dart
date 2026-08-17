@@ -64,60 +64,39 @@ class _MeScreenState extends State<MeScreen> {
       // Load inverters
       Map<String, dynamic>? primaryInverter;
       String status = 'offline';
-      
+
       try {
-        print('[ME_SCREEN] Calling inverterService.getInverters()...');
         final invertersResponse = await ServiceLocator.instance.inverterService.getInverters(token);
-        print('[ME_SCREEN] Inverters response type: ${invertersResponse.runtimeType}');
-        print('[ME_SCREEN] Inverters response: $invertersResponse');
         
-        // Backend now wraps in { success, data, total }
+        // Backend returns array directly, not wrapped in 'data'
         List<dynamic> invertersList = [];
         if (invertersResponse is List) {
           // Direct array response
           print('[ME_SCREEN] Response is List with ${(invertersResponse as List).length} items');
           invertersList = List<dynamic>.from(invertersResponse);
-        } else if (invertersResponse is Map) {
-          print('[ME_SCREEN] Response is Map with keys: ${(invertersResponse as Map).keys.join(', ')}');
-          if (invertersResponse['data'] is List) {
-            // Wrapped in data field
-            print('[ME_SCREEN] Found data field with List, length: ${(invertersResponse['data'] as List).length}');
-            invertersList = List<dynamic>.from(invertersResponse['data'] as List);
-          } else if (invertersResponse['success'] == true && invertersResponse.containsKey('data')) {
-            // Response format: { success, data, total }
-            print('[ME_SCREEN] Found success response with data field');
-            invertersList = List<dynamic>.from(invertersResponse['data'] as List? ?? []);
-          }
+        } else if (invertersResponse is Map && invertersResponse['data'] is List) {
+          invertersList = List<dynamic>.from(invertersResponse['data'] as List);
         }
         
-        print('[ME_SCREEN] Final invertersList length: ${invertersList.length}');
         if (invertersList.isNotEmpty) {
-          primaryInverter = Map<String, dynamic>.from(invertersList.first as Map<String, dynamic>);
-          
+          primaryInverter = Map<String, dynamic>.from(
+            invertersList.first as Map<String, dynamic>,
+          );
+
           // Get inverter status if we have an inverter ID
-          final inverterId = primaryInverter['_id']?.toString() ?? primaryInverter['id']?.toString();
+          final inverterId =
+              primaryInverter['_id']?.toString() ??
+              primaryInverter['id']?.toString();
           if (inverterId != null && inverterId.isNotEmpty) {
             try {
               final statusResponse = await ServiceLocator.instance.inverterService.getInverterStatus(inverterId, token);
-              
-              // Handle status response: { id, connectionStatus, status, ... }
-              if (statusResponse is Map) {
-                // Prefer connectionStatus (online/offline) over status
-                status = statusResponse['connectionStatus']?.toString() ?? 
-                         statusResponse['status']?.toString() ?? 
-                         primaryInverter['status']?.toString() ?? 
-                         'offline';
-              } else if (statusResponse is String) {
-                status = statusResponse;
-              } else {
-                status = primaryInverter['status']?.toString() ?? 'offline';
-              }
-            } catch (e) {
+              status = statusResponse['status']?.toString() ?? primaryInverter['status']?.toString() ?? 'offline';
+            } catch (_) {
               status = primaryInverter['status']?.toString() ?? 'offline';
             }
           }
         }
-      } catch (e) {
+      } catch (_) {
         // If inverters fail to load, continue with just user profile
         print('[ME_SCREEN] Error loading inverters: $e');
       }
@@ -179,7 +158,7 @@ class _MeScreenState extends State<MeScreen> {
     // Try to get from inverter specifications first
     final invertSpecSize = _primaryInverter['specifications']?['panelCapacity'];
     if (invertSpecSize is num) return invertSpecSize.toDouble();
-    
+
     // Fall back to user profile
     final value =
         _userProfile['systemSizeKwp'] ?? _userProfile['systemSize'] ?? 0;
@@ -189,9 +168,10 @@ class _MeScreenState extends State<MeScreen> {
 
   double get _batteryCapacityKwh {
     // Try to get from inverter specifications first
-    final invertSpecBattery = _primaryInverter['specifications']?['batteryCapacity'];
+    final invertSpecBattery =
+        _primaryInverter['specifications']?['batteryCapacity'];
     if (invertSpecBattery is num) return invertSpecBattery.toDouble();
-    
+
     // Fall back to user profile
     final value =
         _userProfile['batteryCapacityKwh'] ?? _userProfile['battery'] ?? 0;
@@ -447,156 +427,163 @@ class _MeScreenState extends State<MeScreen> {
               bottom: true,
               child: CustomScrollView(
                 slivers: [
-                SliverAppBar(
-                  backgroundColor: cs.surface,
-                  title: Text('My Account', style: AppTextStyles.headingMedium),
-                  floating: true,
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppConstants.paddingMD,
-                    0,
-                    AppConstants.paddingMD,
-                    AppConstants.paddingXL,
+                  SliverAppBar(
+                    backgroundColor: cs.surface,
+                    title: Text(
+                      'My Account',
+                      style: AppTextStyles.headingMedium,
+                    ),
+                    floating: true,
                   ),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      _ProfileHeader(
-                        fullName: _fullName,
-                        phoneNumber: _phoneNumber,
-                        planLabel: _planLabel,
-                        isLoading: _isLoadingProfile,
-                        onEdit: _openEditProfileDialog,
-                      ),
-                      const SizedBox(height: AppConstants.paddingMD),
-                      _SystemInfoCard(
-                        systemSizeKwp: _systemSizeKwp,
-                        totalRevenue: _totalRevenue,
-                        batteryCapacityKwh: _batteryCapacityKwh,
-                        isOnline: _isSystemOnline,
-                      ),
-                      const SizedBox(height: AppConstants.paddingMD),
-                      const _SectionLabel('Analytics & Monitoring'),
-                      _MenuGroup(
-                        items: const [
-                          _MenuItem(
-                            Icons.trending_up_rounded,
-                            'Trends',
-                            'View historical data',
-                          ),
-                          _MenuItem(
-                            Icons.insights_rounded,
-                            'Insights',
-                            'Performance analysis',
-                          ),
-                          _MenuItem(
-                            Icons.power_off_rounded,
-                            'Power Cut',
-                            'Power outage tracking',
-                          ),
-                          _MenuItem(
-                            Icons.savings_rounded,
-                            'Savings',
-                            'Financial returns',
-                          ),
-                        ],
-                        onItemTap: (item) => _handleMenuTap(context, item),
-                      ),
-                      const SizedBox(height: AppConstants.paddingMD),
-                      const _SectionLabel('System Setup'),
-                      _MenuGroup(
-                        items: const [
-                          _MenuItem(
-                            Icons.router_rounded,
-                            'Setup Inverter',
-                            'Configure your inverter',
-                          ),
-                          _MenuItem(
-                            Icons.memory_rounded,
-                            'Register ESP32',
-                            'Register your device with backend',
-                          ),
-                          _MenuItem(
-                            Icons.wifi_rounded,
-                            'Wi-Fi Configuration',
-                            'Connect to network',
-                          ),
-                        ],
-                        onItemTap: (item) => _handleMenuTap(context, item),
-                      ),
-                      const SizedBox(height: AppConstants.paddingMD),
-                      const _SectionLabel('Help & Support'),
-                      _MenuGroup(
-                        items: const [
-                          _MenuItem(
-                            Icons.notifications_outlined,
-                            'Notifications',
-                            'View all alerts',
-                          ),
-                          _MenuItem(
-                            Icons.help_outline_rounded,
-                            'FAQ',
-                            'Common questions answered',
-                          ),
-                          _MenuItem(
-                            Icons.chat_bubble_outline_rounded,
-                            'Contact Support',
-                            'Get help from our team',
-                          ),
-                          _MenuItem(
-                            Icons.description_outlined,
-                            'User Guide',
-                            'How to use SolarConnect',
-                          ),
-                        ],
-                        onItemTap: (item) => _handleMenuTap(context, item),
-                      ),
-                      const SizedBox(height: AppConstants.paddingMD),
-                      const _SectionLabel('Settings'),
-                      _MenuGroup(
-                        items: [
-                          const _MenuItem(
-                            Icons.palette_outlined,
-                            'Appearance',
-                            'Theme and display',
-                          ),
-                          // Language subtitle is dynamic
-                          _MenuItem(Icons.language_outlined, 'Language', lang),
-                          const _MenuItem(
-                            Icons.privacy_tip_outlined,
-                            'Privacy',
-                            'Data and permissions',
-                          ),
-                        ],
-                        onItemTap: (item) => _handleMenuTap(context, item),
-                      ),
-                      const SizedBox(height: AppConstants.paddingMD),
-                      const _SectionLabel('Account'),
-                      _MenuGroup(
-                        items: const [
-                          _MenuItem(
-                            Icons.share_outlined,
-                            'Share App',
-                            'Invite friends',
-                          ),
-                          _MenuItem(
-                            Icons.star_outline_rounded,
-                            'Rate Us',
-                            'Leave a review',
-                          ),
-                          _MenuItem(
-                            Icons.logout_rounded,
-                            'Sign Out',
-                            '',
-                            isDestructive: true,
-                          ),
-                        ],
-                        onItemTap: (item) => _handleMenuTap(context, item),
-                      ),
-                    ]),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppConstants.paddingMD,
+                      0,
+                      AppConstants.paddingMD,
+                      AppConstants.paddingXL,
+                    ),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        _ProfileHeader(
+                          fullName: _fullName,
+                          phoneNumber: _phoneNumber,
+                          planLabel: _planLabel,
+                          isLoading: _isLoadingProfile,
+                          onEdit: _openEditProfileDialog,
+                        ),
+                        const SizedBox(height: AppConstants.paddingMD),
+                        _SystemInfoCard(
+                          systemSizeKwp: _systemSizeKwp,
+                          totalRevenue: _totalRevenue,
+                          batteryCapacityKwh: _batteryCapacityKwh,
+                          isOnline: _isSystemOnline,
+                        ),
+                        const SizedBox(height: AppConstants.paddingMD),
+                        const _SectionLabel('Analytics & Monitoring'),
+                        _MenuGroup(
+                          items: const [
+                            _MenuItem(
+                              Icons.trending_up_rounded,
+                              'Trends',
+                              'View historical data',
+                            ),
+                            _MenuItem(
+                              Icons.insights_rounded,
+                              'Insights',
+                              'Performance analysis',
+                            ),
+                            _MenuItem(
+                              Icons.power_off_rounded,
+                              'Power Cut',
+                              'Power outage tracking',
+                            ),
+                            _MenuItem(
+                              Icons.savings_rounded,
+                              'Savings',
+                              'Financial returns',
+                            ),
+                          ],
+                          onItemTap: (item) => _handleMenuTap(context, item),
+                        ),
+                        const SizedBox(height: AppConstants.paddingMD),
+                        const _SectionLabel('System Setup'),
+                        _MenuGroup(
+                          items: const [
+                            _MenuItem(
+                              Icons.router_rounded,
+                              'Setup Inverter',
+                              'Configure your inverter',
+                            ),
+                            _MenuItem(
+                              Icons.memory_rounded,
+                              'Register ESP32',
+                              'Register your device with backend',
+                            ),
+                            _MenuItem(
+                              Icons.wifi_rounded,
+                              'Wi-Fi Configuration',
+                              'Connect to network',
+                            ),
+                          ],
+                          onItemTap: (item) => _handleMenuTap(context, item),
+                        ),
+                        const SizedBox(height: AppConstants.paddingMD),
+                        const _SectionLabel('Help & Support'),
+                        _MenuGroup(
+                          items: const [
+                            _MenuItem(
+                              Icons.notifications_outlined,
+                              'Notifications',
+                              'View all alerts',
+                            ),
+                            _MenuItem(
+                              Icons.help_outline_rounded,
+                              'FAQ',
+                              'Common questions answered',
+                            ),
+                            _MenuItem(
+                              Icons.chat_bubble_outline_rounded,
+                              'Contact Support',
+                              'Get help from our team',
+                            ),
+                            _MenuItem(
+                              Icons.description_outlined,
+                              'User Guide',
+                              'How to use SolarConnect',
+                            ),
+                          ],
+                          onItemTap: (item) => _handleMenuTap(context, item),
+                        ),
+                        const SizedBox(height: AppConstants.paddingMD),
+                        const _SectionLabel('Settings'),
+                        _MenuGroup(
+                          items: [
+                            const _MenuItem(
+                              Icons.palette_outlined,
+                              'Appearance',
+                              'Theme and display',
+                            ),
+                            // Language subtitle is dynamic
+                            _MenuItem(
+                              Icons.language_outlined,
+                              'Language',
+                              lang,
+                            ),
+                            const _MenuItem(
+                              Icons.privacy_tip_outlined,
+                              'Privacy',
+                              'Data and permissions',
+                            ),
+                          ],
+                          onItemTap: (item) => _handleMenuTap(context, item),
+                        ),
+                        const SizedBox(height: AppConstants.paddingMD),
+                        const _SectionLabel('Account'),
+                        _MenuGroup(
+                          items: const [
+                            _MenuItem(
+                              Icons.share_outlined,
+                              'Share App',
+                              'Invite friends',
+                            ),
+                            _MenuItem(
+                              Icons.star_outline_rounded,
+                              'Rate Us',
+                              'Leave a review',
+                            ),
+                            _MenuItem(
+                              Icons.logout_rounded,
+                              'Sign Out',
+                              '',
+                              isDestructive: true,
+                            ),
+                          ],
+                          onItemTap: (item) => _handleMenuTap(context, item),
+                        ),
+                      ]),
+                    ),
                   ),
-                ),
-              ],
+                ],
               ),
             ),
           );
@@ -735,7 +722,7 @@ class _SystemInfoCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isOnline 
+                  color: isOnline
                       ? AppColors.success.withValues(alpha: 0.15)
                       : AppColors.error.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
