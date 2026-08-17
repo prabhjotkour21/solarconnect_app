@@ -25,6 +25,8 @@ class MeScreen extends StatefulWidget {
 
 class _MeScreenState extends State<MeScreen> {
   Map<String, dynamic> _userProfile = {};
+  Map<String, dynamic> _primaryInverter = {};
+  String _inverterStatus = 'offline';
   bool _isLoadingProfile = true;
 
   @override
@@ -48,13 +50,45 @@ class _MeScreenState extends State<MeScreen> {
     }
 
     try {
+      // Load user profile
       final response = await ServiceLocator.instance.authService.getMe(token);
       final profile = response['data'] is Map
           ? Map<String, dynamic>.from(response['data'])
           : response;
+
+      // Load inverters
+      Map<String, dynamic>? primaryInverter;
+      String status = 'offline';
+      
+      try {
+        final invertersResponse = await ServiceLocator.instance.inverterService.getInverters(token);
+        final invertersList = invertersResponse['data'] is List
+            ? List<dynamic>.from(invertersResponse['data'] as List)
+            : [];
+        
+        if (invertersList.isNotEmpty) {
+          primaryInverter = Map<String, dynamic>.from(invertersList.first as Map<String, dynamic>);
+          
+          // Get inverter status if we have an inverter ID
+          final inverterId = primaryInverter['_id']?.toString() ?? primaryInverter['id']?.toString();
+          if (inverterId != null && inverterId.isNotEmpty) {
+            try {
+              final statusResponse = await ServiceLocator.instance.inverterService.getInverterStatus(inverterId, token);
+              status = statusResponse['status']?.toString() ?? primaryInverter['status']?.toString() ?? 'offline';
+            } catch (_) {
+              status = primaryInverter['status']?.toString() ?? 'offline';
+            }
+          }
+        }
+      } catch (_) {
+        // If inverters fail to load, continue with just user profile
+      }
+
       if (mounted) {
         setState(() {
           _userProfile = profile;
+          _primaryInverter = primaryInverter ?? {};
+          _inverterStatus = status;
           _isLoadingProfile = false;
         });
       }
@@ -103,6 +137,11 @@ class _MeScreenState extends State<MeScreen> {
   }
 
   double get _systemSizeKwp {
+    // Try to get from inverter specifications first
+    final invertSpecSize = _primaryInverter['specifications']?['panelCapacity'];
+    if (invertSpecSize is num) return invertSpecSize.toDouble();
+    
+    // Fall back to user profile
     final value =
         _userProfile['systemSizeKwp'] ?? _userProfile['systemSize'] ?? 0;
     if (value is num) return value.toDouble();
@@ -110,6 +149,11 @@ class _MeScreenState extends State<MeScreen> {
   }
 
   double get _batteryCapacityKwh {
+    // Try to get from inverter specifications first
+    final invertSpecBattery = _primaryInverter['specifications']?['batteryCapacity'];
+    if (invertSpecBattery is num) return invertSpecBattery.toDouble();
+    
+    // Fall back to user profile
     final value =
         _userProfile['batteryCapacityKwh'] ?? _userProfile['battery'] ?? 0;
     if (value is num) return value.toDouble();
@@ -124,6 +168,11 @@ class _MeScreenState extends State<MeScreen> {
         0;
     if (value is num) return value.toDouble();
     return double.tryParse(value.toString()) ?? 0;
+  }
+
+  bool get _isSystemOnline {
+    final status = _inverterStatus.toLowerCase();
+    return status == 'active' || status == 'online' || status == 'success';
   }
 
   void _handleMenuTap(BuildContext context, String item) {
@@ -381,6 +430,7 @@ class _MeScreenState extends State<MeScreen> {
                         systemSizeKwp: _systemSizeKwp,
                         totalRevenue: _totalRevenue,
                         batteryCapacityKwh: _batteryCapacityKwh,
+                        isOnline: _isSystemOnline,
                       ),
                       const SizedBox(height: AppConstants.paddingMD),
                       const _SectionLabel('Analytics & Monitoring'),
@@ -614,11 +664,13 @@ class _SystemInfoCard extends StatelessWidget {
     required this.systemSizeKwp,
     required this.totalRevenue,
     required this.batteryCapacityKwh,
+    required this.isOnline,
   });
 
   final double systemSizeKwp;
   final double totalRevenue;
   final double batteryCapacityKwh;
+  final bool isOnline;
 
   @override
   Widget build(BuildContext context) {
@@ -640,7 +692,9 @@ class _SystemInfoCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.15),
+                  color: isOnline 
+                      ? AppColors.success.withValues(alpha: 0.15)
+                      : AppColors.error.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -648,16 +702,16 @@ class _SystemInfoCard extends StatelessWidget {
                     Container(
                       width: 6,
                       height: 6,
-                      decoration: const BoxDecoration(
-                        color: AppColors.success,
+                      decoration: BoxDecoration(
+                        color: isOnline ? AppColors.success : AppColors.error,
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'Online',
+                      isOnline ? 'Online' : 'Offline',
                       style: AppTextStyles.labelSmall.copyWith(
-                        color: AppColors.success,
+                        color: isOnline ? AppColors.success : AppColors.error,
                       ),
                     ),
                   ],
