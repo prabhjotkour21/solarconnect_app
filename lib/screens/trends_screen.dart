@@ -20,6 +20,8 @@ class _TrendsScreenState extends State<TrendsScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   double _totalGeneration = 0.0;
+  DateTime _rangeStart = DateTime.now();
+  DateTime _rangeEnd = DateTime.now();
 
   @override
   void initState() {
@@ -60,6 +62,18 @@ class _TrendsScreenState extends State<TrendsScreen> {
   }
 
   Future<void> _loadTrendData() async {
+    final queryParams = _buildTrendQueryParams();
+    if (queryParams.containsKey('startDate')) {
+      _rangeStart = DateTime.parse(queryParams['startDate'] as String).toLocal();
+    } else {
+      _rangeStart = DateTime.now().toLocal();
+    }
+    if (queryParams.containsKey('endDate')) {
+      _rangeEnd = DateTime.parse(queryParams['endDate'] as String).toLocal();
+    } else {
+      _rangeEnd = DateTime.now().toLocal();
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -103,6 +117,18 @@ class _TrendsScreenState extends State<TrendsScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  String _formatRangeDate(DateTime date) {
+    return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  String _getRangeLabelForDisplay() {
+    if (_filter == _Filter.custom && _customRange != null) {
+      return '${_formatRangeDate(_customRange!.start)} – ${_formatRangeDate(_customRange!.end)}';
+    }
+
+    return '${_formatRangeDate(_rangeStart)} – ${_formatRangeDate(_rangeEnd)}';
   }
 
   Map<String, dynamic> _buildTrendQueryParams() {
@@ -273,7 +299,7 @@ class _TrendsScreenState extends State<TrendsScreen> {
     final maxVal = hasData
         ? data.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2
         : 1.0;
-    final rangeLabel = hasData ? '${data.first.label} – ${data.last.label}' : 'No data';
+    final rangeLabel = hasData ? _getRangeLabelForDisplay() : 'No data';
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
