@@ -15,8 +15,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'test@gmail.com');
-  final _passwordController = TextEditingController(text: '12345678');
+  final _emailController = TextEditingController(text: 'jot@gmail.com');
+  final _passwordController = TextEditingController(text: '123456789');
   bool _isLoading = false;
   bool _showPassword = false;
   String? _errorMessage;
@@ -49,7 +49,9 @@ class _LoginScreenState extends State<LoginScreen> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(AppConstants.authTokenKey, token);
         if (!mounted) return;
-        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const ShellScreen()));
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const ShellScreen()),
+        );
       } else {
         setState(() {
           _errorMessage = 'Login failed. Please check your credentials.';
@@ -58,8 +60,10 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       setState(() {
         final message = e.toString();
-        if (message.contains('SocketException') || message.contains('Connection refused')) {
-          _errorMessage = 'Unable to connect to backend. Make sure the server is running and your emulator can reach localhost.';
+        if (message.contains('SocketException') ||
+            message.contains('Connection refused')) {
+          _errorMessage =
+              'Unable to connect to backend. Make sure the server is running and your emulator can reach localhost.';
         } else {
           _errorMessage = message;
         }
@@ -82,7 +86,9 @@ class _LoginScreenState extends State<LoginScreen> {
           padding: const EdgeInsets.all(24),
           child: Card(
             color: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Form(
@@ -91,11 +97,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Icon(Icons.bolt_rounded, size: 56, color: AppColors.primary),
+                    const Icon(
+                      Icons.bolt_rounded,
+                      size: 56,
+                      color: AppColors.primary,
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       'Welcome back',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
@@ -120,7 +131,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.all(Radius.circular(12)),
                         ),
                       ),
-                      validator: (value) => value == null || value.isEmpty ? 'Enter email' : null,
+                      validator: (value) =>
+                          value == null || value.isEmpty ? 'Enter email' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -130,8 +142,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: InputDecoration(
                         labelText: 'Password',
                         hintText: 'Enter your password',
-                        labelStyle: const TextStyle(color: AppColors.textSecondary),
-                        hintStyle: const TextStyle(color: AppColors.textSecondary),
+                        labelStyle: const TextStyle(
+                          color: AppColors.textSecondary,
+                        ),
+                        hintStyle: const TextStyle(
+                          color: AppColors.textSecondary,
+                        ),
                         filled: true,
                         fillColor: const Color(0xFFF4F6F9),
                         border: const OutlineInputBorder(
@@ -139,7 +155,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _showPassword ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                            _showPassword
+                                ? Icons.visibility_rounded
+                                : Icons.visibility_off_rounded,
                             color: AppColors.textSecondary,
                           ),
                           onPressed: () {
@@ -149,7 +167,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                         ),
                       ),
-                      validator: (value) => value == null || value.isEmpty ? 'Enter password' : null,
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Enter password'
+                          : null,
                     ),
                     const SizedBox(height: 20),
                     if (_errorMessage != null)
@@ -171,14 +191,21 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? const SizedBox(
                               height: 20,
                               width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
                           : const Text('Login'),
                     ),
                     const SizedBox(height: 12),
                     TextButton(
                       onPressed: () {
-                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterScreen()));
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const RegisterScreen(),
+                          ),
+                        );
                       },
                       child: const Text('Create an account'),
                     ),
