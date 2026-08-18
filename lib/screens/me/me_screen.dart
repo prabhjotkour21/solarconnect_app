@@ -37,8 +37,10 @@ class _MeScreenState extends State<MeScreen> {
 
   Future<void> _loadUserProfile() async {
     final token = await ServiceLocator.instance.authService.getStoredToken();
-    print('[ME_SCREEN] Starting _loadUserProfile() | token: ${token != null ? token.substring(0, 20) + '...' : 'NULL'}');
-    
+    print(
+      '[ME_SCREEN] Starting _loadUserProfile() | token: ${token != null ? token.substring(0, 20) + '...' : 'NULL'}',
+    );
+
     if (token == null || token.isEmpty) {
       print('[ME_SCREEN] Token is null/empty, loading from storage');
       final storedUser = await ServiceLocator.instance.authService
@@ -66,18 +68,24 @@ class _MeScreenState extends State<MeScreen> {
       String status = 'offline';
 
       try {
-        final invertersResponse = await ServiceLocator.instance.inverterService.getInverters(token);
-        
+        final dynamic invertersResponse = await ServiceLocator
+            .instance
+            .inverterService
+            .getInverters(token);
+
         // Backend returns array directly, not wrapped in 'data'
         List<dynamic> invertersList = [];
         if (invertersResponse is List) {
           // Direct array response
-          print('[ME_SCREEN] Response is List with ${(invertersResponse as List).length} items');
+          print(
+            '[ME_SCREEN] Response is List with ${(invertersResponse as List).length} items',
+          );
           invertersList = List<dynamic>.from(invertersResponse);
-        } else if (invertersResponse is Map && invertersResponse['data'] is List) {
+        } else if (invertersResponse is Map &&
+            invertersResponse['data'] is List) {
           invertersList = List<dynamic>.from(invertersResponse['data'] as List);
         }
-        
+
         if (invertersList.isNotEmpty) {
           primaryInverter = Map<String, dynamic>.from(
             invertersList.first as Map<String, dynamic>,
@@ -89,16 +97,23 @@ class _MeScreenState extends State<MeScreen> {
               primaryInverter['id']?.toString();
           if (inverterId != null && inverterId.isNotEmpty) {
             try {
-              final statusResponse = await ServiceLocator.instance.inverterService.getInverterStatus(inverterId, token);
-              status = statusResponse['status']?.toString() ?? primaryInverter['status']?.toString() ?? 'offline';
+              final statusResponse = await ServiceLocator
+                  .instance
+                  .inverterService
+                  .getInverterStatus(inverterId, token);
+              status =
+                  statusResponse['status']?.toString() ??
+                  primaryInverter['status']?.toString() ??
+                  'offline';
             } catch (_) {
               status = primaryInverter['status']?.toString() ?? 'offline';
             }
           }
         }
-      } catch (_) {
+      } catch (e, st) {
         // If inverters fail to load, continue with just user profile
         print('[ME_SCREEN] Error loading inverters: $e');
+        print(st);
       }
 
       if (mounted) {
@@ -108,7 +123,9 @@ class _MeScreenState extends State<MeScreen> {
           _inverterStatus = status;
           _isLoadingProfile = false;
         });
-        print('[ME_SCREEN] Updated state: inverterStatus=$status, systemSize=${_systemSizeKwp}, battery=${_batteryCapacityKwh}, revenue=${_totalRevenue}');
+        print(
+          '[ME_SCREEN] Updated state: inverterStatus=$status, systemSize=${_systemSizeKwp}, battery=${_batteryCapacityKwh}, revenue=${_totalRevenue}',
+        );
       }
     } catch (_) {
       final storedUser = await ServiceLocator.instance.authService
@@ -192,7 +209,7 @@ class _MeScreenState extends State<MeScreen> {
   bool get _isSystemOnline {
     // connectionStatus: 'online' or 'offline' from inverter status API
     if (_inverterStatus.toLowerCase() == 'online') return true;
-    
+
     // Fallback to status field if connectionStatus not available
     final status = _inverterStatus.toLowerCase();
     return status == 'active' || status == 'online' || status == 'success';
