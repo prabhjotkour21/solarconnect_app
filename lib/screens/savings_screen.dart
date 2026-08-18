@@ -7,87 +7,6 @@ import '../../theme/app_text_styles.dart';
 enum _Period { today, yesterday, weekly, monthly, custom }
 enum _GraphFilter { today, weekly, monthly, allTime, custom }
 
-// Savings data per period (for summary cards)
-const _periodData = {
-  _Period.today: {
-    'totalSavings': 48.0,
-    'dailyAverage': 48.0,
-    'lastPeriodSavings': 48.0,
-    'label': "Today's Savings",
-    'breakdownLabel': 'Today',
-  },
-  _Period.yesterday: {
-    'totalSavings': 52.0,
-    'dailyAverage': 52.0,
-    'lastPeriodSavings': 52.0,
-    'label': "Yesterday's Savings",
-    'breakdownLabel': 'Yesterday',
-  },
-  _Period.weekly: {
-    'totalSavings': 320.0,
-    'dailyAverage': 45.7,
-    'lastPeriodSavings': 320.0,
-    'label': 'This Week\'s Savings',
-    'breakdownLabel': 'This Week',
-  },
-  _Period.monthly: {
-    'totalSavings': 1450.0,
-    'dailyAverage': 48.3,
-    'lastPeriodSavings': 1450.0,
-    'label': 'This Month\'s Savings',
-    'breakdownLabel': 'This Month',
-  },
-  _Period.custom: {
-    'totalSavings': 0.0,
-    'dailyAverage': 0.0,
-    'lastPeriodSavings': 0.0,
-    'label': 'Custom Period',
-    'breakdownLabel': 'Custom',
-  },
-};
-
-// Graph data per filter
-final _graphData = <_GraphFilter, List<Map<String, dynamic>>>{
-  _GraphFilter.today: [
-    {'label': '6AM',  'xAxis': 'Time', 'value': 4},
-    {'label': '8AM',  'xAxis': 'Time', 'value': 10},
-    {'label': '10AM', 'xAxis': 'Time', 'value': 14},
-    {'label': '12PM', 'xAxis': 'Time', 'value': 18},
-    {'label': '2PM',  'xAxis': 'Time', 'value': 16},
-    {'label': '4PM',  'xAxis': 'Time', 'value': 20},
-    {'label': '6PM',  'xAxis': 'Time', 'value': 12},
-    {'label': '8PM',  'xAxis': 'Time', 'value': 6},
-  ],
-  _GraphFilter.weekly: [
-    {'label': 'Mon', 'xAxis': 'Day', 'value': 42},
-    {'label': 'Tue', 'xAxis': 'Day', 'value': 38},
-    {'label': 'Wed', 'xAxis': 'Day', 'value': 50},
-    {'label': 'Thu', 'xAxis': 'Day', 'value': 45},
-    {'label': 'Fri', 'xAxis': 'Day', 'value': 48},
-    {'label': 'Sat', 'xAxis': 'Day', 'value': 55},
-    {'label': 'Sun', 'xAxis': 'Day', 'value': 40},
-  ],
-  _GraphFilter.monthly: [
-    {'label': 'W1', 'xAxis': 'Week', 'value': 310},
-    {'label': 'W2', 'xAxis': 'Week', 'value': 355},
-    {'label': 'W3', 'xAxis': 'Week', 'value': 390},
-    {'label': 'W4', 'xAxis': 'Week', 'value': 395},
-  ],
-  _GraphFilter.allTime: [
-    {'label': 'Jan', 'xAxis': 'Month', 'value': 900},
-    {'label': 'Feb', 'xAxis': 'Month', 'value': 1050},
-    {'label': 'Mar', 'xAxis': 'Month', 'value': 1200},
-    {'label': 'Apr', 'xAxis': 'Month', 'value': 1100},
-    {'label': 'May', 'xAxis': 'Month', 'value': 1350},
-    {'label': 'Jun', 'xAxis': 'Month', 'value': 1450},
-  ],
-  _GraphFilter.custom: [
-    {'label': 'Start', 'xAxis': 'Date', 'value': 44},
-    {'label': 'Mid',   'xAxis': 'Date', 'value': 96},
-    {'label': 'End',   'xAxis': 'Date', 'value': 50},
-  ],
-};
-
 class SavingsScreen extends StatefulWidget {
   const SavingsScreen({super.key});
 
@@ -96,20 +15,111 @@ class SavingsScreen extends StatefulWidget {
 }
 
 class _SavingsScreenState extends State<SavingsScreen> {
-  double _investmentAmount = 1740;
+  double _investmentAmount = 0;
   _Period _selectedPeriod = _Period.today;
   _GraphFilter _graphFilter = _GraphFilter.weekly;
   DateTimeRange? _customRange;
   DateTimeRange? _graphCustomRange;
+  bool _isLoading = true;
+  bool _isSaving = false;
+  String? _errorMessage;
+  Map<String, dynamic> _summaryData = {};
+  List<Map<String, dynamic>> _graphBars = [];
 
-  Map<String, dynamic> get _data => _periodData[_selectedPeriod]!;
-  List<Map<String, dynamic>> get _graphBars => _graphData[_graphFilter]!;
+  @override
+  void initState() {
+    super.initState();
+    _loadSavingsData();
+  }
 
-  void _showInvestmentDialog() {
+  Future<void> _loadSavingsData() async {
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      setState(() {
+        _errorMessage = 'Please login again to view savings.';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final response = await ServiceLocator.instance.savingsService.getSummary(
+        token,
+        period: _mapPeriodToApi(_selectedPeriod),
+      );
+
+      final summary = (response['summary'] ?? <String, dynamic>{}) as Map<String, dynamic>;
+      final investmentResponse = await ServiceLocator.instance.userProfileService.getProfile(token);
+      final userInvestment = (investmentResponse['investmentAmount'] ?? investmentResponse['data']?['investmentAmount'] ?? 0)
+          .toDouble();
+
+      final graphResponse = await ServiceLocator.instance.savingsService.getTrend(token, filter: _mapGraphFilterToApi(_graphFilter));
+      final series = (graphResponse['series'] as List?) ?? const [];
+
+      setState(() {
+        _summaryData = summary;
+        _investmentAmount = userInvestment;
+        _graphBars = series
+            .map<Map<String, dynamic>>((item) => {
+                  'label': item['label'] ?? '',
+                  'xAxis': item['label'] != null ? 'Date' : 'Value',
+                  'value': (item['savedAmount'] ?? 0).round(),
+                })
+            .toList();
+        _isLoading = false;
+        _errorMessage = null;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _mapPeriodToApi(_Period period) {
+    switch (period) {
+      case _Period.today:
+        return 'today';
+      case _Period.yesterday:
+        return 'yesterday';
+      case _Period.weekly:
+        return 'weekly';
+      case _Period.monthly:
+      case _Period.custom:
+        return 'monthly';
+    }
+  }
+
+  String _mapGraphFilterToApi(_GraphFilter filter) {
+    switch (filter) {
+      case _GraphFilter.today:
+        return 'today';
+      case _GraphFilter.weekly:
+        return 'weekly';
+      case _GraphFilter.monthly:
+        return 'monthly';
+      case _GraphFilter.allTime:
+      case _GraphFilter.custom:
+        return 'alltime';
+    }
+  }
+
+  Map<String, dynamic> get _data => {
+        'totalSavings': (_summaryData['totalSavings'] ?? 0).toDouble(),
+        'dailyAverage': (_summaryData['totalSavings'] ?? 0).toDouble(),
+        'lastPeriodSavings': (_summaryData['estimatedSavings'] ?? _summaryData['totalSavings'] ?? 0).toDouble(),
+        'label': "Today's Savings",
+        'breakdownLabel': 'Today',
+      };
+
+  List<Map<String, dynamic>> get _graphDataList => _graphBars.isNotEmpty ? _graphBars : const [];
+
+  Future<void> _showInvestmentDialog() async {
     final controller = TextEditingController(
       text: _investmentAmount.toStringAsFixed(0),
     );
-    showDialog(
+    final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceDark,
@@ -139,7 +149,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => Navigator.pop(ctx, false),
             child: Text(
               'Cancel',
               style: AppTextStyles.labelSmall.copyWith(
@@ -148,13 +158,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
             ),
           ),
           TextButton(
-            onPressed: () {
-              final val = double.tryParse(controller.text);
-              if (val != null && val > 0) {
-                setState(() => _investmentAmount = val);
-              }
-              Navigator.pop(ctx);
-            },
+            onPressed: () => Navigator.pop(ctx, true),
             child: Text(
               'Save',
               style: AppTextStyles.labelSmall.copyWith(
@@ -165,6 +169,39 @@ class _SavingsScreenState extends State<SavingsScreen> {
         ],
       ),
     );
+
+    if (confirm != true) return;
+
+    final val = double.tryParse(controller.text);
+    if (val == null || val <= 0) {
+      return;
+    }
+
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please login again to update investment.')),
+        );
+      }
+      return;
+    }
+
+    try {
+      setState(() => _isSaving = true);
+      await ServiceLocator.instance.savingsService.updateInvestmentAmount(token, val);
+      setState(() => _investmentAmount = val);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to update investment amount')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
   }
 
   Future<void> _pickCustomRange() async {
@@ -185,16 +222,11 @@ class _SavingsScreenState extends State<SavingsScreen> {
       ),
     );
     if (range != null) {
-      final days = range.end.difference(range.start).inDays + 1;
-      final total = days * 48.0;
       setState(() {
         _customRange = range;
-        _periodData[_Period.custom]!['totalSavings'] = total;
-        _periodData[_Period.custom]!['dailyAverage'] = 48.0;
-        _periodData[_Period.custom]!['lastPeriodSavings'] = total;
-        _periodData[_Period.custom]!['label'] =
-            '${range.start.day}/${range.start.month} – ${range.end.day}/${range.end.month}';
+        _selectedPeriod = _Period.custom;
       });
+      await _loadSavingsData();
     }
   }
 
@@ -293,24 +325,20 @@ class _SavingsScreenState extends State<SavingsScreen> {
       ),
     );
     if (picked != null) {
-      final days = picked.end.difference(picked.start).inDays + 1;
       setState(() {
         _graphCustomRange = picked;
         _graphFilter = _GraphFilter.custom;
-        _graphData[_GraphFilter.custom] = [
-          {'label': '${picked.start.day}/${picked.start.month}', 'xAxis': 'Date', 'value': 44},
-          {'label': 'Mid',   'xAxis': 'Date', 'value': (days * 48 / 3).round()},
-          {'label': '${picked.end.day}/${picked.end.month}',   'xAxis': 'Date', 'value': 50},
-        ];
       });
+      await _loadSavingsData();
     }
   }
 
-  void _onPeriodTap(_Period period) {
+  Future<void> _onPeriodTap(_Period period) async {
     if (period == _Period.custom) {
-      _pickCustomRange();
+      await _pickCustomRange();
     }
     setState(() => _selectedPeriod = period);
+    await _loadSavingsData();
   }
 
   String get _periodLabel {
@@ -476,7 +504,20 @@ class _SavingsScreenState extends State<SavingsScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.bodyLarge.copyWith(color: AppColors.error),
+                    ),
+                  ),
+                )
+              : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -530,6 +571,12 @@ class _SavingsScreenState extends State<SavingsScreen> {
               ),
             ),
             const SizedBox(height: 24),
+
+            if (_isSaving)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 12),
+                child: LinearProgressIndicator(),
+              ),
 
             // Savings breakdown
             Text('Savings Breakdown', style: AppTextStyles.headingMedium),
@@ -738,7 +785,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
                 color: AppColors.surfaceDark,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: _buildTrendChart(_graphBars),
+              child: _buildTrendChart(_graphDataList),
             ),
           ],
         ),
