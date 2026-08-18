@@ -15,14 +15,21 @@ class SavingsData {
     required this.roi_months,
   });
 
-  static SavingsData demo() {
+  static SavingsData fromApi(Map<String, dynamic> summary, {double investmentAmount = 0}) {
+    final totalSavings = (summary['totalSavings'] ?? 0).toDouble();
+    final dailyAverage = (summary['averageDailySavings'] ?? summary['totalSavings'] ?? 0).toDouble();
+    final lastMonthSavings = (summary['lastPeriodSavings'] ?? summary['totalSavings'] ?? 0).toDouble();
+    final roi = (summary['roi'] ?? 0).toDouble();
+    final investment = investmentAmount > 0 ? investmentAmount : (summary['investmentAmount'] ?? 0).toDouble();
+    final breakEven = (summary['breakEvenMonths'] ?? 0).toInt();
+
     return SavingsData(
-      totalSavings: 145,
-      dailyAverage: 48,
-      lastMonthSavings: 54,
-      roi: 8.36,
-      investmentAmount: 1740,
-      roi_months: 36,
+      totalSavings: totalSavings,
+      dailyAverage: dailyAverage,
+      lastMonthSavings: lastMonthSavings,
+      roi: roi,
+      investmentAmount: investment,
+      roi_months: breakEven,
     );
   }
 
