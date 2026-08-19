@@ -48,6 +48,12 @@ class _SavingsScreenState extends State<SavingsScreen> {
       final response = await ServiceLocator.instance.savingsService.getSummary(
         token,
         period: _mapPeriodToApi(_selectedPeriod),
+        startDate: _selectedPeriod == _Period.custom
+            ? _formatDate(_customRange?.start)
+            : null,
+        endDate: _selectedPeriod == _Period.custom
+            ? _formatDate(_customRange?.end)
+            : null,
       );
 
       final summary =
@@ -63,7 +69,16 @@ class _SavingsScreenState extends State<SavingsScreen> {
               .toDouble();
 
       final graphResponse = await ServiceLocator.instance.savingsService
-          .getTrend(token, filter: _mapGraphFilterToApi(_graphFilter));
+          .getTrend(
+          token,
+          filter: _mapGraphFilterToApi(_graphFilter),
+          startDate: _graphFilter == _GraphFilter.custom
+            ? _formatDate(_graphCustomRange?.start)
+            : null,
+          endDate: _graphFilter == _GraphFilter.custom
+            ? _formatDate(_graphCustomRange?.end)
+            : null,
+          );
       final series = (graphResponse['series'] as List?) ?? const [];
 
       setState(() {
@@ -117,14 +132,23 @@ class _SavingsScreenState extends State<SavingsScreen> {
     }
   }
 
+  String? _formatDate(DateTime? date) {
+    if (date == null) return null;
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
+  }
+
   Map<String, dynamic> get _data => {
     'totalSavings': (_summaryData['totalSavings'] ?? 0).toDouble(),
-    'dailyAverage': (_summaryData['totalSavings'] ?? 0).toDouble(),
+    'dailyAverage':
+      (_summaryData['averageDailySavings'] ?? _summaryData['totalSavings'] ?? 0)
+        .toDouble(),
     'lastPeriodSavings':
         (_summaryData['estimatedSavings'] ?? _summaryData['totalSavings'] ?? 0)
             .toDouble(),
-    'label': "Today's Savings",
-    'breakdownLabel': 'Today',
+    'label': _periodLabel == 'Custom' ? 'Selected Period' : "${_periodLabel}'s Savings",
+    'breakdownLabel': _periodLabel == 'Custom' ? 'Selected Period' : _periodLabel,
   };
 
   List<Map<String, dynamic>> get _graphDataList =>
@@ -313,6 +337,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
           await _pickGraphCustomRange();
         } else {
           setState(() => _graphFilter = value);
+          await _loadSavingsData();
         }
       },
       child: Container(
@@ -383,6 +408,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
   Future<void> _onPeriodTap(_Period period) async {
     if (period == _Period.custom) {
       await _pickCustomRange();
+      return;
     }
     setState(() => _selectedPeriod = period);
     await _loadSavingsData();
@@ -464,8 +490,10 @@ class _SavingsScreenState extends State<SavingsScreen> {
         Navigator.pop(context);
         if (value == _Period.custom) {
           await _pickCustomRange();
+          return;
         }
         setState(() => _selectedPeriod = value);
+        await _loadSavingsData();
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -524,7 +552,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
       lastMonthSavings: lastPeriodSavings,
       roi: _investmentAmount > 0 ? (totalSavings / _investmentAmount) * 100 : 0,
       investmentAmount: _investmentAmount,
-      roi_months: _investmentAmount > 0 ? (_investmentAmount / 48).ceil() : 0,
+      roi_months: ((_summaryData['breakEvenMonths'] ?? 0) as num).ceil(),
     );
 
     return Scaffold(
@@ -542,10 +570,13 @@ class _SavingsScreenState extends State<SavingsScreen> {
           IconButton(
             tooltip: 'Reset to Today',
             icon: Icon(Icons.restore_rounded, color: AppColors.success),
-            onPressed: () => setState(() {
-              _selectedPeriod = _Period.today;
-              _customRange = null;
-            }),
+            onPressed: () async {
+              setState(() {
+                _selectedPeriod = _Period.today;
+                _customRange = null;
+              });
+              await _loadSavingsData();
+            },
           ),
           // Filter icon
           GestureDetector(
@@ -816,7 +847,9 @@ class _SavingsScreenState extends State<SavingsScreen> {
                         ), //Row in this line  in colum and romw in this line i have ot add 3 comment
                         const SizedBox(height: 12),
                         Text(
-                          'Your system will pay for itself in ${savings.roiMonthsDisplay}',
+                          savings.roiMonthsDisplay == 'Not available'
+                              ? 'Break-even will be available after solar savings are recorded'
+                              : 'Your system will pay for itself in ${savings.roiMonthsDisplay}',
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.textSecondary,
                           ),
