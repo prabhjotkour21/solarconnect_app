@@ -34,6 +34,9 @@ class SavingsData {
   }
 
   String get roiMonthsDisplay {
+    if (roi_months <= 0) {
+      return 'Not available';
+    }
     if (roi_months < 12) {
       return '$roi_months months';
     } else {
