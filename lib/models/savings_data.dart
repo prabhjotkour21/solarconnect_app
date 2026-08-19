@@ -4,7 +4,7 @@ class SavingsData {
   final double lastMonthSavings;
   final double roi; // return on investment %
   final double investmentAmount;
-  final int roi_months; // months to break even
+  final double roi_months; // months to break even
 
   SavingsData({
     required this.totalSavings,
@@ -21,7 +21,7 @@ class SavingsData {
     final lastMonthSavings = (summary['lastPeriodSavings'] ?? summary['totalSavings'] ?? 0).toDouble();
     final roi = (summary['roi'] ?? 0).toDouble();
     final investment = investmentAmount > 0 ? investmentAmount : (summary['investmentAmount'] ?? 0).toDouble();
-    final breakEven = (summary['breakEvenMonths'] ?? 0).toInt();
+    final breakEven = (summary['breakEvenMonths'] ?? 0).toDouble();
 
     return SavingsData(
       totalSavings: totalSavings,
@@ -38,10 +38,15 @@ class SavingsData {
       return 'Not available';
     }
     if (roi_months < 12) {
-      return '$roi_months months';
+      if (roi_months < 1) {
+        final days = (roi_months * 30).ceil();
+        return '$days ${days == 1 ? 'day' : 'days'}';
+      }
+      return '${roi_months.toStringAsFixed(2)} months';
     } else {
-      int years = roi_months ~/ 12;
-      int months = roi_months % 12;
+      final totalMonths = roi_months.round();
+      int years = totalMonths ~/ 12;
+      int months = totalMonths % 12;
       if (months == 0) {
         return '$years years';
       }
