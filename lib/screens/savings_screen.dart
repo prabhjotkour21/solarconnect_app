@@ -141,6 +141,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
 
   Map<String, dynamic> get _data => {
     'totalSavings': (_summaryData['totalSavings'] ?? 0).toDouble(),
+    'monthlySavings': (_summaryData['monthlySavings'] ?? 0).toDouble(),
     'dailyAverage':
       (_summaryData['averageDailySavings'] ?? _summaryData['totalSavings'] ?? 0)
         .toDouble(),
@@ -541,18 +542,21 @@ class _SavingsScreenState extends State<SavingsScreen> {
   @override
   Widget build(BuildContext context) {
     final totalSavings = _data['totalSavings'] as double;
-    final dailyAverage = _data['dailyAverage'] as double;
+    final monthlySavings = _data['monthlySavings'] as double;
     final lastPeriodSavings = _data['lastPeriodSavings'] as double;
+    final breakdownSavings = _selectedPeriod == _Period.monthly
+      ? monthlySavings
+      : totalSavings;
     final periodLabel = _data['label'] as String;
     final breakdownLabel = _data['breakdownLabel'] as String;
 
     final savings = SavingsData(
       totalSavings: totalSavings,
-      dailyAverage: dailyAverage,
+      dailyAverage: monthlySavings,
       lastMonthSavings: lastPeriodSavings,
-      roi: _investmentAmount > 0 ? (totalSavings / _investmentAmount) * 100 : 0,
+      roi: ((_summaryData['roi'] ?? 0) as num).toDouble(),
       investmentAmount: _investmentAmount,
-      roi_months: ((_summaryData['breakEvenMonths'] ?? 0) as num).ceil(),
+      roi_months: ((_summaryData['breakEvenMonths'] ?? 0) as num).toDouble(),
     );
 
     return Scaffold(
@@ -695,7 +699,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
 
                   _SavingsCard(
                     label: breakdownLabel,
-                    value: '₹${savings.dailyAverage.toStringAsFixed(0)}',
+                    value: '₹${breakdownSavings.toStringAsFixed(0)}',
                     icon: Icons.calendar_today_rounded,
                     color: AppColors.primary,
                   ),
