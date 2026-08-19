@@ -26,10 +26,14 @@ class SavingsService {
     String token, {
     String filter = 'weekly',
     double tariff = 8,
+    String? startDate,
+    String? endDate,
   }) async {
     final queryParams = <String, dynamic>{
       'filter': filter,
       'tariff': tariff,
+      if (startDate != null && startDate.isNotEmpty) 'startDate': startDate,
+      if (endDate != null && endDate.isNotEmpty) 'endDate': endDate,
     };
 
     return _apiService.get('/savings/trend', queryParams: queryParams, token: token);
