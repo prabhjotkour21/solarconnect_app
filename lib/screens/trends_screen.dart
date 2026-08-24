@@ -179,6 +179,28 @@ class _TrendsScreenState extends State<TrendsScreen> {
     return double.tryParse(value.toString()) ?? 0.0;
   }
 
+  String _formatChartLabel(TrendDataPoint point) {
+    if (_filter == _Filter.yearly) return point.label;
+
+    final parsed = DateTime.tryParse(point.label);
+    if (parsed == null) return point.label;
+
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+
+    if (_filter == _Filter.today) {
+      return point.label.contains(' ')
+          ? point.label.split(' ').last
+          : '${parsed.hour.toString().padLeft(2, '0')}:00';
+    }
+    if (_filter == _Filter.monthly) {
+      return '${months[parsed.month - 1]} ${parsed.year}';
+    }
+    return '${parsed.day} ${months[parsed.month - 1]}';
+  }
+
   // ── Filter bottom sheet ────────────────────────────────────────────────────
   void _showFilterSheet() {
     showModalBottomSheet(
@@ -592,7 +614,7 @@ class _TrendsScreenState extends State<TrendsScreen> {
   }) {
     const chartH  = 150.0;
     const barW    = 28.0;
-    const itemW   = 46.0;
+    const itemW   = 60.0;
     const yLabelW = 42.0;
     final ySteps  = List.generate(5, (i) => yMax * (1 - i / 4));
 
@@ -705,15 +727,17 @@ class _TrendsScreenState extends State<TrendsScreen> {
               Divider(height: 1, color: Colors.white24),
               const SizedBox(height: 4),
               SizedBox(
-                height: 14,
+                height: 24,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: data
                         .map((p) => SizedBox(
                               width: itemW,
-                              child: Text(p.label,
+                              child: Text(_formatChartLabel(p),
                                   textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                       color: Colors.white38, fontSize: 9)),
                             ))
