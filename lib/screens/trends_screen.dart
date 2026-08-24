@@ -746,9 +746,14 @@ class _TrendsScreenState extends State<TrendsScreen> {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(xAxisLabel,
-                  style:
-                      const TextStyle(color: Colors.white38, fontSize: 9)),
+              SizedBox(
+                width: data.length * itemW,
+                child: Text(
+                  xAxisLabel,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white38, fontSize: 9),
+                ),
+              ),
             ],
           ),
         ),
