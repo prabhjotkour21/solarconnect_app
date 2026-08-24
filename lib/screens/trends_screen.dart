@@ -603,7 +603,7 @@ class _TrendsScreenState extends State<TrendsScreen> {
                   )),
                     const SizedBox(height: 4),
                     Text(
-                      'Full green bar = ${maxVal.toStringAsFixed(2)} kW',
+                      'Total Value = ${maxVal.toStringAsFixed(2)} kW',
                       style: AppTextStyles.labelSmall
                       .copyWith(color: AppColors.textSecondary),
                     ),
