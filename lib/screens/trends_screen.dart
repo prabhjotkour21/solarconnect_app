@@ -321,6 +321,9 @@ class _TrendsScreenState extends State<TrendsScreen> {
     final maxVal = hasData
         ? data.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2
         : 1.0;
+    final averageGeneration = hasData
+      ? data.map((e) => e.value).reduce((a, b) => a + b) / data.length
+      : 0.0;
     final rangeLabel = hasData ? _getRangeLabelForDisplay() : 'No data';
 
     return Scaffold(
@@ -553,6 +556,19 @@ class _TrendsScreenState extends State<TrendsScreen> {
 
               // ── Detailed table ───────────────────────────────────────────────
               Text('Detailed Data', style: AppTextStyles.headingMedium),
+              const SizedBox(height: 4),
+              Text(
+                'Solar generation for each ${_filter == _Filter.monthly ? 'month' : 'day'} in $rangeLabel.',
+                style: AppTextStyles.labelSmall
+                    .copyWith(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Total: ${_totalGeneration.toStringAsFixed(2)} kWh  |  '
+                'Average: ${averageGeneration.toStringAsFixed(2)} kW per period',
+                style: AppTextStyles.labelSmall
+                    .copyWith(color: AppColors.textSecondary),
+              ),
               const SizedBox(height: 12),
               ...data.map((point) => Container(
                     margin: const EdgeInsets.only(bottom: 8),
@@ -564,8 +580,10 @@ class _TrendsScreenState extends State<TrendsScreen> {
                     child: Row(
                       children: [
                         SizedBox(
-                          width: 48,
-                          child: Text(point.label,
+                          width: 78,
+                          child: Text(_formatChartLabel(point),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                               style: AppTextStyles.labelSmall
                                   .copyWith(color: AppColors.textPrimary)),
                         ),
@@ -584,12 +602,16 @@ class _TrendsScreenState extends State<TrendsScreen> {
                         ),
                         const SizedBox(width: 8),
                         SizedBox(
-                          width: 60,
-                          child: Text(
-                            '${point.value.toStringAsFixed(2)} kW',
-                            style: AppTextStyles.labelSmall
-                                .copyWith(color: AppColors.textSecondary),
-                            textAlign: TextAlign.right,
+                          width: 92,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              '${point.value.toStringAsFixed(2)} kW',
+                              style: AppTextStyles.labelSmall
+                                  .copyWith(color: AppColors.textSecondary),
+                              textAlign: TextAlign.right,
+                            ),
                           ),
                         ),
                       ],
