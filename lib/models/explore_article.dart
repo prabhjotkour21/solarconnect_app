@@ -22,6 +22,7 @@ class ExploreArticle {
   });
 
   static const List<ExploreArticle> demoArticles = [
+    /*
     ExploreArticle(
       id: '1',
       title: 'Maximizing Solar Output in Winter Months',
@@ -204,6 +205,7 @@ class ExploreArticle {
           '• SRECs (Solar Renewable Energy Credits)\n\n'
           'Combined incentives can reduce your effective cost by 50-70%, making solar the best investment available.',
     ),
+            */
     ExploreArticle(
       id: '9',
       title: 'Understanding Your Solar Energy Flow',
