@@ -22,6 +22,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
     'Finance',
     'Maintenance',
     'Education',
+    'Energy Insights',
+    'Battery',
+    'Savings',
+    'Backup & Safety',
+    'Electric Vehicles',
   ];
 
   List<ExploreArticle> get _filtered {
