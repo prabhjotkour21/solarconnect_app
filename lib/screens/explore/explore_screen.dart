@@ -16,14 +16,11 @@ class ExploreScreen extends StatefulWidget {
 
 class _ExploreScreenState extends State<ExploreScreen> {
   int _selectedCategory = 0;
-  final _categories = [
+  late final List<String> _categories = [
     'All',
-    'Education',
-    'Energy Insights',
-    'Battery',
-    'Savings',
-    'Backup & Safety',
-    'Electric Vehicles',
+    ...ExploreArticle.demoArticles
+        .map((article) => article.category)
+        .toSet(),
   ];
 
   List<ExploreArticle> get _filtered {
