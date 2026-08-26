@@ -213,7 +213,13 @@ class ExploreArticle {
       imageEmoji: '🔄',
       author: 'Solar Education Team',
       publishDate: 'August 26, 2026',
-      content: 'Solar energy can be used in several ways depending on your system and current energy demand. During the day, solar production can power your home directly. When production is higher than your home\'s demand, the excess energy may be stored in a battery or exported to the grid. When solar production is not enough, your home can use stored battery energy or draw electricity from the grid. Monitoring these energy flows helps you understand how your solar system is performing and how your energy is being used.',
+        content: 'Solar energy can be used in several ways depending on your system and current energy demand. Understanding these energy flows helps you see how your solar system is performing.\n\n'
+          'Common Energy Flows:\n'
+          '• Solar production can power your home directly during the day\n'
+          '• Excess energy may be stored in a battery\n'
+          '• Additional excess energy may be exported to the grid\n'
+          '• Your home can use stored battery energy when solar production is low\n'
+          '• Your home can draw electricity from the grid when more energy is required',
     ),
     ExploreArticle(
       id: '10',
@@ -224,7 +230,13 @@ class ExploreArticle {
       imageEmoji: '📊',
       author: 'Solar Education Team',
       publishDate: 'August 24, 2026',
-      content: 'Solar production changes throughout the day based on sunlight, weather, and household energy demand. Reviewing your energy history can help you understand normal production patterns and identify unexpected changes. Daily views can show short-term production, while monthly and yearly views help you identify longer-term trends. Comparing solar production with home consumption can also help you understand how much of your energy demand is being covered by solar.',
+        content: 'Solar production changes throughout the day based on sunlight, weather, and household energy demand. Reviewing your energy history can help you understand normal production patterns and identify unexpected changes.\n\n'
+          'Useful Data Views:\n'
+          '• Daily data shows short-term production patterns\n'
+          '• Monthly data helps reveal seasonal changes\n'
+          '• Yearly data shows longer-term system performance\n'
+          '• Lifetime data provides an overview of total production\n'
+          '• Comparing production with consumption shows how much demand is covered by solar',
     ),
     ExploreArticle(
       id: '11',
@@ -235,7 +247,13 @@ class ExploreArticle {
       imageEmoji: '⚡',
       author: 'Solar Education Team',
       publishDate: 'August 22, 2026',
-      content: 'A solar energy system can combine multiple sources of electricity to meet your home\'s energy needs. Solar production can power your home first, while excess energy may be stored in a battery or exported to the grid. When solar production decreases, stored battery energy can help supply your home. If additional electricity is required, your home can draw energy from the grid. Understanding these energy flows makes it easier to monitor your system and manage your energy usage.',
+        content: 'A solar energy system can combine multiple sources of electricity to meet your home\'s energy needs. Each source supports the home at different times depending on production, consumption, and battery charge.\n\n'
+          'How the System Works:\n'
+          '• Solar production can power your home first\n'
+          '• Excess solar may be stored in a battery\n'
+          '• Extra energy may be exported to the utility grid\n'
+          '• Battery energy can supply your home when solar production decreases\n'
+          '• Grid electricity can provide additional power when required',
     ),
     ExploreArticle(
       id: '12',
@@ -246,7 +264,13 @@ class ExploreArticle {
       imageEmoji: '🔋',
       author: 'Energy Storage Specialist',
       publishDate: 'August 20, 2026',
-      content: 'Battery storage allows excess solar energy to be saved and used later. Your battery\'s charge level shows how much stored energy is currently available. A backup reserve allows you to keep a selected amount of battery energy available for a potential power outage. Using more of the battery during normal operation can increase solar self-consumption, while maintaining a higher reserve can provide more stored energy during an outage. The best setting depends on your energy needs and backup priorities.',
+        content: 'Battery storage allows excess solar energy to be saved and used later. Your battery\'s charge level shows how much stored energy is currently available, while the backup reserve protects energy for a potential outage.\n\n'
+          'Important Battery Settings:\n'
+          '• Charge level shows the energy currently available\n'
+          '• Backup reserve keeps a selected amount available for outages\n'
+          '• Using more battery energy can increase solar self-consumption\n'
+          '• A higher reserve provides more energy during an outage\n'
+          '• The best setting depends on your energy needs and backup priorities',
     ),
     ExploreArticle(
       id: '13',
@@ -257,7 +281,13 @@ class ExploreArticle {
       imageEmoji: '💰',
       author: 'Solar Savings Advisor',
       publishDate: 'August 18, 2026',
-      content: 'Maximizing solar savings is not only about producing more electricity. It is also about using that energy efficiently. Using solar energy when production is high can reduce the amount of electricity purchased from the grid. Excess solar can be stored in a compatible battery and used later when solar production is lower. Where supported, energy usage can also be planned around utility rates. Monitoring production, consumption, battery usage, and grid activity helps you make better energy decisions over time.',
+        content: 'Maximizing solar savings is not only about producing more electricity. It is also about using that energy efficiently and reducing unnecessary grid dependence.\n\n'
+          'Ways to Improve Savings:\n'
+          '• Use solar energy when production is high\n'
+          '• Store compatible excess solar in a battery\n'
+          '• Use stored energy when solar production is lower\n'
+          '• Plan energy usage around utility rates where supported\n'
+          '• Monitor production, consumption, battery use, and grid activity',
     ),
     ExploreArticle(
       id: '14',
@@ -268,7 +298,13 @@ class ExploreArticle {
       imageEmoji: '🛡️',
       author: 'Backup and Safety Team',
       publishDate: 'August 16, 2026',
-      content: 'During a power outage, a compatible battery backup system can provide electricity to supported home loads while the system is disconnected from the utility grid. The amount of backup energy available depends on the battery\'s current charge and the configured backup reserve. Monitoring battery levels before and during severe weather can help you understand how much backup energy is available. Energy management features can also help users prepare their system for potential outages.',
+        content: 'During a power outage, a compatible battery backup system can provide electricity to supported home loads while the system is disconnected from the utility grid. Backup availability depends on the battery\'s charge and configured reserve.\n\n'
+          'During an Outage:\n'
+          '• The system disconnects from the utility grid for safety\n'
+          '• Supported home loads can receive battery backup power\n'
+          '• Available backup energy depends on the current battery charge\n'
+          '• The configured backup reserve affects how much energy is protected\n'
+          '• Energy management features can help prepare for potential outages',
     ),
     ExploreArticle(
       id: '15',
@@ -279,7 +315,13 @@ class ExploreArticle {
       imageEmoji: '🚗',
       author: 'EV Energy Specialist',
       publishDate: 'August 14, 2026',
-      content: 'An electric vehicle can use solar energy as part of a home\'s overall energy system. When solar production is higher than the home\'s current demand, available excess energy can be directed toward EV charging when supported by the vehicle and charging system. Smart charging features can help users make better use of available solar production instead of relying entirely on grid electricity. Monitoring solar generation and charging activity can help users understand how much of their vehicle charging is being supported by solar energy.',
+        content: 'An electric vehicle can use solar energy as part of a home\'s overall energy system. When solar production is higher than the home\'s current demand, available excess energy can be directed toward EV charging when supported by the vehicle and charging system.\n\n'
+          'Solar EV Charging Benefits:\n'
+          '• Excess solar can support vehicle charging\n'
+          '• Smart charging can prioritize available solar production\n'
+          '• Solar charging can reduce reliance on grid electricity\n'
+          '• Charging activity can be compared with solar generation\n'
+          '• Monitoring helps show how much vehicle charging is solar-supported',
     ),
     ExploreArticle(
       id: '16',
@@ -290,7 +332,13 @@ class ExploreArticle {
       imageEmoji: '↔️',
       author: 'Solar Education Team',
       publishDate: 'August 12, 2026',
-      content: 'Grid import occurs when your home requires more electricity than your solar and battery system can provide. Grid export occurs when your system produces more energy than your home and battery can currently use, where export is supported. Tracking both directions gives you a clearer picture of your energy usage. Utility rules, export limits, and electricity rates can vary by location, so your actual savings and export value depend on your local energy plan.',
+        content: 'Grid import occurs when your home requires more electricity than your solar and battery system can provide. Grid export occurs when your system produces more energy than your home and battery can currently use, where export is supported.\n\n'
+          'Understanding Import and Export:\n'
+          '• Import means your home is drawing electricity from the grid\n'
+          '• Export means excess energy is being sent to the grid\n'
+          '• Tracking both directions gives a clearer picture of energy usage\n'
+          '• Export limits and utility rules vary by location\n'
+          '• Savings and export value depend on your local energy plan',
     ),
     ExploreArticle(
       id: '17',
@@ -301,7 +349,14 @@ class ExploreArticle {
       imageEmoji: '🏠',
       author: 'Home Energy Analyst',
       publishDate: 'August 10, 2026',
-      content: 'Energy monitoring can show how much electricity your home produces, consumes, stores, imports, and exports. Reviewing this information over time can help you identify changes in energy usage and understand when your home relies most on solar, battery, or grid electricity. Historical energy data can also help you compare different periods and make more informed decisions about energy consumption.',
+        content: 'Energy monitoring can show how much electricity your home produces, consumes, stores, imports, and exports. Reviewing this information over time can help you understand when your home relies most on solar, battery, or grid electricity.\n\n'
+          'What Your Energy Data Can Show:\n'
+          '• Solar production across different time periods\n'
+          '• Household energy consumption patterns\n'
+          '• Battery charging and discharging activity\n'
+          '• Electricity imported from the grid\n'
+          '• Excess energy exported to the grid\n\n'
+          'Historical comparisons can help you identify changes in usage and make more informed energy decisions.',
     ),
     ExploreArticle(
       id: '18',
@@ -312,7 +367,13 @@ class ExploreArticle {
       imageEmoji: '⛈️',
       author: 'Backup and Safety Team',
       publishDate: 'August 8, 2026',
-      content: 'Severe weather can increase the risk of grid interruptions. If your solar system includes battery backup, checking the battery charge and backup reserve before a major weather event can help ensure that stored energy is available when needed. Some energy systems also provide weather-related preparation features that can automatically prioritize battery charging when severe weather is expected. Always follow the safety guidance provided for your specific solar and battery system.',
+        content: 'Severe weather can increase the risk of grid interruptions. If your solar system includes battery backup, preparing the battery before a major weather event can help ensure that stored energy is available when needed.\n\n'
+          'Before Severe Weather:\n'
+          '• Check the current battery charge\n'
+          '• Review and adjust the backup reserve if appropriate\n'
+          '• Confirm that backup settings are enabled\n'
+          '• Use weather-related preparation features where supported\n'
+          '• Follow the safety guidance for your specific solar and battery system',
     ),
   ];
 }
