@@ -18,9 +18,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
   int _selectedCategory = 0;
   final _categories = [
     'All',
-    'Tips & Tricks',
-    'Finance',
-    'Maintenance',
     'Education',
     'Energy Insights',
     'Battery',
