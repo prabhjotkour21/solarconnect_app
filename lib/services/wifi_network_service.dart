@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:wifi_scan/wifi_scan.dart';
 
 class WifiNetwork {
@@ -14,13 +15,21 @@ class WifiNetwork {
 
 class WifiNetworkService {
   Future<List<WifiNetwork>> scanNetworks() async {
-    final canScan = await WiFiScan.instance.canStartScan(askPermissions: true);
-    if (canScan != CanStartScan.yes) {
-      throw StateError('Wi-Fi scanning is unavailable. Enable Wi-Fi and location permissions, then try again.');
-    }
+    try {
+      final canScan = await WiFiScan.instance.canStartScan(askPermissions: true);
+      if (canScan != CanStartScan.yes) {
+        throw StateError('Wi-Fi scanning is unavailable. Enable Wi-Fi and location permissions, then try again.');
+      }
 
-    await WiFiScan.instance.startScan();
-    final accessPoints = await WiFiScan.instance.getScannedResults();
+      await WiFiScan.instance.startScan();
+      final accessPoints = await WiFiScan.instance.getScannedResults();
+      return _toNetworks(accessPoints);
+    } on MissingPluginException {
+      throw StateError('Wi-Fi scanner is not available in this app build. Stop the app and run a full Android rebuild.');
+    }
+  }
+
+  List<WifiNetwork> _toNetworks(List<WiFiAccessPoint> accessPoints) {
     final networks = accessPoints
         .where((accessPoint) => accessPoint.ssid.trim().isNotEmpty)
         .map(
