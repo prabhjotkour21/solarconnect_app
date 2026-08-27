@@ -28,6 +28,7 @@ dependencies:
   # Works on Android, iOS, web, desktop — no setup required.
   shared_preferences: ^2.3.0
   socket_io_client: ^2.0.0
+  wifi_scan: ^0.4.1+2
 
   # ── Networking ───────────────────────────────────────────────────────────
   # http: Used for REST API calls from the Flutter app to the backend.
