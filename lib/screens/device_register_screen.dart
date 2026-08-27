@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../services/service_locator.dart';
+import '../services/wifi_network_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../utils/app_constants.dart';
@@ -30,9 +31,37 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
   final TextEditingController _wifiSsidController = TextEditingController();
   final TextEditingController _wifiPasswordController = TextEditingController();
   bool _isProvisioning = false;
+  final _wifiNetworkService = WifiNetworkService();
+  List<WifiNetwork> _wifiNetworks = [];
+  bool _isWifiScanning = false;
+  String? _wifiScanError;
 
   Future<String?> _getToken() async {
     return ServiceLocator.instance.authService.getStoredToken();
+  }
+
+  Future<void> _scanWifiNetworks() async {
+    if (!mounted) return;
+    setState(() {
+      _isWifiScanning = true;
+      _wifiScanError = null;
+    });
+    try {
+      final networks = await _wifiNetworkService.scanNetworks();
+      if (!mounted) return;
+      setState(() {
+        _wifiNetworks = networks;
+        if (_wifiSsidController.text.isNotEmpty &&
+            !networks.any((network) => network.ssid == _wifiSsidController.text)) {
+          _wifiSsidController.clear();
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _wifiScanError = e.toString().replaceFirst('Bad state: ', ''));
+    } finally {
+      if (mounted) setState(() => _isWifiScanning = false);
+    }
   }
 
   Future<void> _registerDevice() async {
@@ -76,6 +105,7 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
         _message = 'Device registered successfully.';
       });
       AppDialogs.showSuccessSnackBar(context, 'ESP32 registered successfully');
+      await _scanWifiNetworks();
       if (deviceToken != null && deviceToken.isNotEmpty) {
         showDialog(
           context: context,
@@ -267,7 +297,37 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
                     Text('1) Put your ESP32 into provisioning mode (press the button).\n2) Connect your phone to the ESP32 Wi‑Fi AP (SSID: SC_ESP32_<serial>).\n3) Enter your home Wi‑Fi credentials below and tap "Send to Device".',
                         style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
                     const SizedBox(height: AppConstants.paddingSM),
-                    TextField(controller: _wifiSsidController, decoration: InputDecoration(labelText: 'Home Wi‑Fi SSID', filled: true, fillColor: AppColors.surfaceDark)),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: _wifiSsidController.text.isEmpty ? null : _wifiSsidController.text,
+                            decoration: const InputDecoration(labelText: 'Home Wi-Fi SSID'),
+                            items: _wifiNetworks
+                                .map((network) => DropdownMenuItem<String>(
+                                      value: network.ssid,
+                                      child: Text('${network.ssid} (${network.signal}%)'),
+                                    ))
+                                .toList(),
+                            onChanged: (ssid) {
+                              if (ssid != null) _wifiSsidController.text = ssid;
+                            },
+                            hint: const Text('Select detected network'),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Scan Wi-Fi networks',
+                          onPressed: _isWifiScanning ? null : _scanWifiNetworks,
+                          icon: _isWifiScanning
+                              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.refresh_rounded),
+                        ),
+                      ],
+                    ),
+                    if (_wifiScanError != null)
+                      Text(_wifiScanError!, style: AppTextStyles.bodySmall.copyWith(color: AppColors.error)),
+                    if (!_isWifiScanning && _wifiScanError == null && _wifiNetworks.isEmpty)
+                      Text('No networks detected. Turn on Wi-Fi and scan again.', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
                     const SizedBox(height: AppConstants.paddingSM),
                     TextField(controller: _wifiPasswordController, decoration: InputDecoration(labelText: 'Home Wi‑Fi Password', filled: true, fillColor: AppColors.surfaceDark), obscureText: true),
                     const SizedBox(height: AppConstants.paddingSM),
@@ -313,6 +373,8 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
     _firmwareController.dispose();
     _locationController.dispose();
     _descriptionController.dispose();
+    _wifiSsidController.dispose();
+    _wifiPasswordController.dispose();
     super.dispose();
   }
 }
