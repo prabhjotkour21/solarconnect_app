@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/service_locator.dart';
+import '../../services/wifi_network_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../utils/app_dialogs.dart';
@@ -19,17 +20,39 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
   String? _statusMessage;
   String? _inverterId;
   String? _errorMessage;
-
-  final List<Map<String, dynamic>> _networks = [
-    {'name': 'Salarlogger\'s Wi-Fi', 'signal': 85, 'locked': false},
-    {'name': 'NETPLUS_5G', 'signal': 60, 'locked': false},
-    {'name': 'Vodafone', 'signal': 40, 'locked': true},
-  ];
+  final _wifiNetworkService = WifiNetworkService();
+  List<WifiNetwork> _networks = [];
+  bool _isScanning = false;
+  String? _scanError;
 
   @override
   void initState() {
     super.initState();
     _loadFirstInverter();
+    _scanNetworks();
+  }
+
+  Future<void> _scanNetworks() async {
+    if (!mounted) return;
+    setState(() {
+      _isScanning = true;
+      _scanError = null;
+    });
+    try {
+      final networks = await _wifiNetworkService.scanNetworks();
+      if (!mounted) return;
+      setState(() {
+        _networks = networks;
+        if (_selectedNetwork != null && !networks.any((network) => network.ssid == _selectedNetwork)) {
+          _selectedNetwork = null;
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _scanError = e.toString().replaceFirst('Bad state: ', ''));
+    } finally {
+      if (mounted) setState(() => _isScanning = false);
+    }
   }
 
   Future<void> _loadFirstInverter() async {
@@ -216,17 +239,31 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
                 ),
               ),
 
-            Text(
-              'Select Network',
-              style: AppTextStyles.headingMedium,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Select Network', style: AppTextStyles.headingMedium),
+                IconButton(
+                  tooltip: 'Scan again',
+                  onPressed: _isScanning ? null : _scanNetworks,
+                  icon: _isScanning
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.refresh_rounded),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
 
+            if (_scanError != null)
+              Text(_scanError!, style: AppTextStyles.bodySmall.copyWith(color: AppColors.error)),
+            if (!_isScanning && _scanError == null && _networks.isEmpty)
+              Text('No Wi-Fi networks found. Make sure Wi-Fi is on and scan again.', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+
             ..._networks.map((network) {
-              final isSelected = _selectedNetwork == network['name'];
+              final isSelected = _selectedNetwork == network.ssid;
               return GestureDetector(
                 onTap: () {
-                  setState(() => _selectedNetwork = network['name'] as String);
+                  setState(() => _selectedNetwork = network.ssid);
                 },
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 10),
@@ -277,21 +314,21 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
                             Row(
                               children: [
                                 Text(
-                                  network['name'] as String,
+                                  network.ssid,
                                   style: AppTextStyles.labelLarge.copyWith(
                                     color: AppColors.textPrimary,
                                   ),
                                 ),
-                                if (network['locked'] == true)
+                                if (network.isSecured)
                                   const SizedBox(width: 8),
-                                if (network['locked'] == true)
+                                if (network.isSecured)
                                   Icon(Icons.lock_outline,
                                       size: 14, color: AppColors.textSecondary),
                               ],
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Signal: ${network['signal']}%',
+                              'Signal: ${network.signal}%',
                               style: AppTextStyles.labelSmall.copyWith(
                                 color: AppColors.textSecondary,
                               ),
