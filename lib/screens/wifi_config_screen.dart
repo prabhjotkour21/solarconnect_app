@@ -15,6 +15,8 @@ class WifiConfigScreen extends StatefulWidget {
 class _WifiConfigScreenState extends State<WifiConfigScreen> {
   String? _selectedNetwork;
   final _passwordController = TextEditingController();
+  final _passwordFocusNode = FocusNode();
+  final _passwordFieldKey = GlobalKey();
   bool _showPassword = false;
   bool _isProcessing = false;
   String? _statusMessage;
@@ -90,6 +92,23 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
         _errorMessage = e.toString();
       });
     }
+  }
+
+  void _selectNetwork(String ssid) {
+    setState(() => _selectedNetwork = ssid);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final fieldContext = _passwordFieldKey.currentContext;
+      if (fieldContext != null) {
+        Scrollable.ensureVisible(
+          fieldContext,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOut,
+          alignment: 0.2,
+        );
+      }
+      _passwordFocusNode.requestFocus();
+    });
   }
 
   Future<void> _configureWifi() async {
@@ -263,7 +282,7 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
               final isSelected = _selectedNetwork == network.ssid;
               return GestureDetector(
                 onTap: () {
-                  setState(() => _selectedNetwork = network.ssid);
+                  _selectNetwork(network.ssid);
                 },
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 10),
@@ -357,7 +376,9 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
               const SizedBox(height: 8),
 
               TextField(
+                key: _passwordFieldKey,
                 controller: _passwordController,
+                focusNode: _passwordFocusNode,
                 obscureText: !_showPassword,
                 style: AppTextStyles.bodyMedium,
                 decoration: InputDecoration(
@@ -428,6 +449,7 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
   @override
   void dispose() {
     _passwordController.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 }
