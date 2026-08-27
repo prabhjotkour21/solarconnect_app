@@ -259,10 +259,17 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
       ),
       backgroundColor: cs.surface,
       body: Padding(
-        padding: const EdgeInsets.all(AppConstants.paddingMD),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        padding: EdgeInsets.only(
+          left: AppConstants.paddingMD,
+          right: AppConstants.paddingMD,
+          top: AppConstants.paddingMD,
+          bottom: MediaQuery.viewInsetsOf(context).bottom + AppConstants.paddingMD,
+        ),
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             _buildTextField(_serialController, 'Serial Number', 'ESP32-SN-00124'),
             const SizedBox(height: AppConstants.paddingSM),
             _buildTextField(_macController, 'MAC Address', 'A4:CF:12:7E:2A:3B'),
@@ -344,7 +351,8 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
               const SizedBox(height: AppConstants.paddingSM),
               Text(_message!, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
             ],
-          ],
+            ],
+          ),
         ),
       ),
     );
