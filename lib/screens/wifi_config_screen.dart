@@ -169,6 +169,7 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
       appBar: AppBar(
@@ -180,11 +181,18 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: PopScope(
+        canPop: !keyboardVisible,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop && keyboardVisible) {
+            FocusManager.instance.primaryFocus?.unfocus();
+          }
+        },
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -440,7 +448,8 @@ class _WifiConfigScreenState extends State<WifiConfigScreen> {
               ),
               const SizedBox(height: 16),
             ],
-          ],
+            ],
+          ),
         ),
       ),
     );
