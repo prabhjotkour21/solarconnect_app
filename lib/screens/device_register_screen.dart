@@ -111,8 +111,17 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
           context: context,
           builder: (dialogContext) => AlertDialog(
             backgroundColor: AppColors.cardDark,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
             title: Text('Device Token', style: AppTextStyles.headingMedium),
-            content: SelectableText(deviceToken, style: AppTextStyles.bodyMedium),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 320),
+              child: SelectableText(
+                deviceToken,
+                style: AppTextStyles.bodyMedium,
+                textAlign: TextAlign.left,
+              ),
+            ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
             ],
@@ -309,8 +318,12 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
                   children: [
                     Text('Provision ESP32 (SoftAP)', style: AppTextStyles.headingSmall),
                     const SizedBox(height: AppConstants.paddingSM),
-                    Text('1) Put your ESP32 into provisioning mode (press the button).\n2) Connect your phone to the ESP32 Wi‑Fi AP (SSID: SC_ESP32_<serial>).\n3) Enter your home Wi‑Fi credentials below and tap "Send to Device".',
-                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+                    Text(
+                      '1. Put the ESP32 into provisioning mode.\n'
+                      '2. Connect your phone to SC_ESP32_<serial>.\n'
+                      '3. Select your home Wi-Fi and enter its password.',
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                    ),
                     const SizedBox(height: AppConstants.paddingSM),
                     Row(
                       children: [
@@ -344,7 +357,16 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
                     if (!_isWifiScanning && _wifiScanError == null && _wifiNetworks.isEmpty)
                       Text('No networks detected. Turn on Wi-Fi and scan again.', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
                     const SizedBox(height: AppConstants.paddingSM),
-                    TextField(controller: _wifiPasswordController, decoration: InputDecoration(labelText: 'Home Wi‑Fi Password', filled: true, fillColor: AppColors.surfaceDark), obscureText: true),
+                    TextField(
+                      controller: _wifiPasswordController,
+                      decoration: InputDecoration(
+                        labelText: 'Home Wi-Fi Password',
+                        filled: true,
+                        fillColor: AppColors.surfaceDark,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                      ),
+                      obscureText: true,
+                    ),
                     const SizedBox(height: AppConstants.paddingSM),
                     ElevatedButton(
                       onPressed: _isProvisioning ? null : _provisionToDevice,
