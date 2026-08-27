@@ -250,6 +250,7 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: cs.surface,
@@ -258,18 +259,25 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
         title: Text('Register ESP32', style: AppTextStyles.headingLarge.copyWith(color: cs.onSurface)),
       ),
       backgroundColor: cs.surface,
-      body: Padding(
-        padding: EdgeInsets.only(
-          left: AppConstants.paddingMD,
-          right: AppConstants.paddingMD,
-          top: AppConstants.paddingMD,
-          bottom: MediaQuery.viewInsetsOf(context).bottom + AppConstants.paddingMD,
-        ),
-        child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+      body: PopScope(
+        canPop: !keyboardVisible,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop && keyboardVisible) {
+            FocusManager.instance.primaryFocus?.unfocus();
+          }
+        },
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: AppConstants.paddingMD,
+            right: AppConstants.paddingMD,
+            top: AppConstants.paddingMD,
+            bottom: MediaQuery.viewInsetsOf(context).bottom + AppConstants.paddingMD,
+          ),
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
             _buildTextField(_serialController, 'Serial Number', 'ESP32-SN-00124'),
             const SizedBox(height: AppConstants.paddingSM),
             _buildTextField(_macController, 'MAC Address', 'A4:CF:12:7E:2A:3B'),
@@ -351,7 +359,8 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
               const SizedBox(height: AppConstants.paddingSM),
               Text(_message!, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
             ],
-            ],
+              ],
+            ),
           ),
         ),
       ),
