@@ -109,12 +109,12 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
       if (deviceToken != null && deviceToken.isNotEmpty) {
         showDialog(
           context: context,
-          builder: (_) => AlertDialog(
+          builder: (dialogContext) => AlertDialog(
             backgroundColor: AppColors.cardDark,
             title: Text('Device Token', style: AppTextStyles.headingMedium),
             content: SelectableText(deviceToken, style: AppTextStyles.bodyMedium),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
             ],
           ),
         );
