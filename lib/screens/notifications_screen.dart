@@ -181,28 +181,63 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _markAsRead(NotificationItem item) async {
-    if (item.isRead) {
-      return;
+    if (!item.isRead) {
+      final token = await ServiceLocator.instance.authService.getStoredToken();
+      if (token == null || token.isEmpty) {
+        AppDialogs.showErrorSnackBar(
+          context,
+          'Authentication required. Please login again.',
+        );
+        return;
+      }
+
+      try {
+        await ServiceLocator.instance.notificationService.markAsRead(
+          item.id,
+          token,
+        );
+        item.isRead = true;
+        if (mounted) {
+          setState(() {
+            if (_unreadCount > 0) {
+              _unreadCount -= 1;
+            }
+          });
+        }
+      } catch (e) {
+        AppDialogs.showErrorSnackBar(context, e.toString());
+        return;
+      }
     }
 
-    final token = await ServiceLocator.instance.authService.getStoredToken();
-    if (token == null || token.isEmpty) {
-      AppDialogs.showErrorSnackBar(
-        context,
-        'Authentication required. Please login again.',
-      );
-      return;
+    if (mounted) {
+      _showNotificationDetails(item);
     }
+  }
 
-    try {
-      await ServiceLocator.instance.notificationService.markAsRead(
-        item.id,
-        token,
-      );
-      await _loadNotifications();
-    } catch (e) {
-      AppDialogs.showErrorSnackBar(context, e.toString());
-    }
+  void _showNotificationDetails(NotificationItem item) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surfaceDark,
+        title: Text(
+          item.title,
+          style: AppTextStyles.headingMedium,
+        ),
+        content: Text(
+          item.description,
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _deleteNotification(NotificationItem item) async {
