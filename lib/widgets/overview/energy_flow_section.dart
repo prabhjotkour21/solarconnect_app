@@ -6,11 +6,11 @@ import '../../models/energy_reading.dart';
 import 'energy_flow_painter.dart';
 import 'energy_node.dart';
 
-const _solarColor = AppColors.warning;
-const _gridColor = AppColors.info;
+final _solarColor = AppColors.warning;
+final _gridColor = AppColors.info;
 const _homeColor = Color(0xFF7C4DFF);
-const _batteryColor = AppColors.success;
-const _inverterColor = AppColors.primary;
+final _batteryColor = AppColors.success;
+final _inverterColor = AppColors.primary;
 
 // Circle sizes
 const _nodeR = 36.0; // outer node radius  (diameter 72)
@@ -92,7 +92,7 @@ class _EnergyFlowSectionState extends State<EnergyFlowSection>
                     Container(
                       width: 6,
                       height: 6,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: AppColors.success,
                         shape: BoxShape.circle,
                       ),
