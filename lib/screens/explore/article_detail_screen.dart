@@ -7,10 +7,8 @@ import '../../utils/app_constants.dart';
 class ArticleDetailScreen extends StatelessWidget {
   final ExploreArticle article;
 
-  const ArticleDetailScreen({
-    Key? key,
-    required this.article,
-  }) : super(key: key);
+  const ArticleDetailScreen({Key? key, required this.article})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -20,12 +18,12 @@ class ArticleDetailScreen extends StatelessWidget {
         backgroundColor: AppColors.surfaceDark,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share, color: AppColors.textPrimary),
+            icon: Icon(Icons.share, color: AppColors.textPrimary),
             onPressed: () => _showShareDialog(context),
           ),
         ],
@@ -53,8 +51,9 @@ class ArticleDetailScreen extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: _getCategoryColor(),
-                      borderRadius:
-                          BorderRadius.circular(AppConstants.radiusMD),
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.radiusMD,
+                      ),
                     ),
                     child: Text(
                       article.category,
@@ -73,10 +72,7 @@ class ArticleDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    article.title,
-                    style: AppTextStyles.headingLarge,
-                  ),
+                  Text(article.title, style: AppTextStyles.headingLarge),
                   const SizedBox(height: AppConstants.paddingMD),
                   Row(
                     children: [
@@ -118,16 +114,14 @@ class ArticleDetailScreen extends StatelessWidget {
               ),
             ),
 
-            const Divider(color: AppColors.divider, height: 1),
+            Divider(color: AppColors.divider, height: 1),
 
             // Content
             Padding(
               padding: const EdgeInsets.all(AppConstants.paddingLG),
               child: Text(
                 article.content,
-                style: AppTextStyles.bodyLarge.copyWith(
-                  height: 1.6,
-                ),
+                style: AppTextStyles.bodyLarge.copyWith(height: 1.6),
               ),
             ),
 
@@ -186,10 +180,7 @@ class ArticleDetailScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'Share Article',
-              style: AppTextStyles.headingMedium,
-            ),
+            Text('Share Article', style: AppTextStyles.headingMedium),
             const SizedBox(height: AppConstants.paddingLG),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -242,18 +233,11 @@ class _ShareOption extends StatelessWidget {
               color: AppColors.cardDark,
               borderRadius: BorderRadius.circular(AppConstants.radiusLG),
             ),
-            child: Icon(
-              icon,
-              color: AppColors.primary,
-              size: 28,
-            ),
+            child: Icon(icon, color: AppColors.primary, size: 28),
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          label,
-          style: AppTextStyles.bodySmall,
-        ),
+        Text(label, style: AppTextStyles.bodySmall),
       ],
     );
   }
