@@ -53,12 +53,9 @@ class _HelpScreenState extends State<HelpScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.surfaceDark,
         elevation: 0,
-        title: Text(
-          'Help & Support',
-          style: AppTextStyles.headingLarge,
-        ),
+        title: Text('Help & Support', style: AppTextStyles.headingLarge),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -70,7 +67,8 @@ class _HelpScreenState extends State<HelpScreen> {
             icon: Icons.email,
             title: 'Email Support',
             subtitle: 'support@solarconnect.app',
-            onTap: () => _showContactDialog('Email', 'support@solarconnect.app'),
+            onTap: () =>
+                _showContactDialog('Email', 'support@solarconnect.app'),
           ),
           const SizedBox(height: AppConstants.paddingMD),
           _ContactCard(
@@ -112,10 +110,7 @@ class _HelpScreenState extends State<HelpScreen> {
           const SizedBox(height: AppConstants.paddingXL),
 
           // Quick Links
-          Text(
-            'Quick Links',
-            style: AppTextStyles.headingMedium,
-          ),
+          Text('Quick Links', style: AppTextStyles.headingMedium),
           const SizedBox(height: AppConstants.paddingMD),
           _QuickLinkTile(
             icon: Icons.description,
@@ -152,10 +147,7 @@ class _HelpScreenState extends State<HelpScreen> {
             ),
             child: Column(
               children: [
-                Text(
-                  'SolarConnect',
-                  style: AppTextStyles.headingSmall,
-                ),
+                Text('SolarConnect', style: AppTextStyles.headingSmall),
                 const SizedBox(height: 8),
                 Text(
                   'Version 1.0.0 (Build 2026.06.10)',
@@ -178,14 +170,8 @@ class _HelpScreenState extends State<HelpScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.cardDark,
-        title: Text(
-          type,
-          style: AppTextStyles.headingMedium,
-        ),
-        content: Text(
-          value,
-          style: AppTextStyles.bodyLarge,
-        ),
+        title: Text(type, style: AppTextStyles.headingMedium),
+        content: Text(value, style: AppTextStyles.bodyLarge),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -208,10 +194,7 @@ class _HelpScreenState extends State<HelpScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.cardDark,
-        title: Text(
-          'Live Chat',
-          style: AppTextStyles.headingMedium,
-        ),
+        title: Text('Live Chat', style: AppTextStyles.headingMedium),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -222,25 +205,23 @@ class _HelpScreenState extends State<HelpScreen> {
                 color: AppColors.backgroundDark,
                 borderRadius: BorderRadius.circular(AppConstants.radiusMD),
               ),
-              child: const Text(
+              child: Text(
                 'Support Agent: Hi! How can I help you today?',
                 style: TextStyle(color: AppColors.textPrimary),
               ),
             ),
             const SizedBox(height: AppConstants.paddingMD),
             TextField(
-              style: const TextStyle(color: AppColors.primaryText),
+              style: TextStyle(color: AppColors.primaryText),
               decoration: InputDecoration(
                 hintText: 'Type your message...',
-                hintStyle: const TextStyle(color: AppColors.secondaryText),
+                hintStyle: TextStyle(color: AppColors.secondaryText),
                 border: OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppConstants.radiusMD),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: AppColors.dividerColor),
-                  borderRadius:
-                      BorderRadius.circular(AppConstants.radiusMD),
+                  borderSide: BorderSide(color: AppColors.dividerColor),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                 ),
               ),
             ),
@@ -296,13 +277,12 @@ class _HelpScreenState extends State<HelpScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-              style: const TextStyle(color: AppColors.primaryText),
+              style: TextStyle(color: AppColors.primaryText),
               decoration: InputDecoration(
                 hintText: 'Describe the issue',
-                hintStyle: const TextStyle(color: AppColors.secondaryText),
+                hintStyle: TextStyle(color: AppColors.secondaryText),
                 border: OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppConstants.radiusMD),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                 ),
               ),
               maxLines: 3,
@@ -341,13 +321,12 @@ class _HelpScreenState extends State<HelpScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-              style: const TextStyle(color: AppColors.primaryText),
+              style: TextStyle(color: AppColors.primaryText),
               decoration: InputDecoration(
                 hintText: 'Describe the feature',
-                hintStyle: const TextStyle(color: AppColors.secondaryText),
+                hintStyle: TextStyle(color: AppColors.secondaryText),
                 border: OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppConstants.radiusMD),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                 ),
               ),
               maxLines: 3,
@@ -481,7 +460,7 @@ class _ContactCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.secondaryText),
+            Icon(Icons.chevron_right, color: AppColors.secondaryText),
           ],
         ),
       ),
@@ -520,10 +499,7 @@ class _FAQItem extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        question,
-                        style: AppTextStyles.bodyLarge,
-                      ),
+                      child: Text(question, style: AppTextStyles.bodyLarge),
                     ),
                     Icon(
                       isExpanded ? Icons.expand_less : Icons.expand_more,
@@ -534,7 +510,7 @@ class _FAQItem extends StatelessWidget {
               ),
               if (isExpanded)
                 Container(
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     border: Border(
                       top: BorderSide(color: AppColors.dividerColor),
                     ),
@@ -585,7 +561,7 @@ class _QuickLinkTile extends StatelessWidget {
             const SizedBox(width: AppConstants.paddingMD),
             Text(title, style: AppTextStyles.bodyLarge),
             const Spacer(),
-            const Icon(Icons.chevron_right, color: AppColors.secondaryText),
+            Icon(Icons.chevron_right, color: AppColors.secondaryText),
           ],
         ),
       ),
