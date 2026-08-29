@@ -10,9 +10,10 @@ import 'screens/savings_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'screens/inverter_setup_screen.dart';
 import 'screens/wifi_config_screen.dart';
+import 'theme/app_colors.dart';
 
 // Global notifiers — settings screen writes to these, app rebuilds
-final ValueNotifier<ThemeMode> appThemeMode = ValueNotifier(ThemeMode.dark);
+final ValueNotifier<ThemeMode> appThemeMode = AppColors.themeMode;
 final ValueNotifier<String> appLanguage = ValueNotifier('English');
 
 void main() {
