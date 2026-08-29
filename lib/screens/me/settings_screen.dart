@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../main.dart';
+import '../../models/notification_preference.dart';
 import '../../services/service_locator.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
@@ -14,8 +15,15 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  // Legacy notification settings
   bool _notificationsEnabled = true;
   bool _dailySummaryEnabled = true;
+  
+  // New notification preferences
+  late NotificationPreference _notificationPrefs;
+  bool _isLoadingNotificationPrefs = false;
+  
+  // Privacy and appearance settings
   bool _allowDataSharing = false;
   bool _analyticsOptIn = false;
   bool _isSavingPreferences = false;
@@ -26,6 +34,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    _notificationPrefs = NotificationPreference.defaultPreferences();
     _loadAllSettings();
   }
 
@@ -36,6 +45,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     try {
+      // Load notification preferences
+      await _loadNotificationPreferences(token);
+      
       final notificationsResponse = await ServiceLocator.instance.settingsService.getNotificationSettings(token);
       final appearanceResponse = await ServiceLocator.instance.settingsService.getAppearanceSettings(token);
       final privacyResponse = await ServiceLocator.instance.settingsService.getPrivacySettings(token);
@@ -69,6 +81,176 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } catch (_) {
       // Ignore on failure and keep default toggle state.
+    }
+  }
+
+  Future<void> _loadNotificationPreferences(String token) async {
+    setState(() {
+      _isLoadingNotificationPrefs = true;
+    });
+
+    try {
+      _notificationPrefs = await ServiceLocator.instance.notificationService
+          .getNotificationPreferences(token);
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      print('[SettingsScreen] Error loading notification preferences: $e');
+      _notificationPrefs = NotificationPreference.defaultPreferences();
+    } finally {
+      setState(() {
+        _isLoadingNotificationPrefs = false;
+      });
+    }
+  }
+
+  Future<void> _updateNotificationCategoryPreference(
+    String category,
+    bool enabled,
+  ) async {
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      AppDialogs.showErrorSnackBar(
+        context,
+        'Authentication required. Please login again.',
+      );
+      return;
+    }
+
+    try {
+      // Optimistic update
+      setState(() {
+        switch (category) {
+          case 'alerts':
+            _notificationPrefs = _notificationPrefs.copyWith(
+              enableAlerts: enabled,
+            );
+            break;
+          case 'savings':
+            _notificationPrefs = _notificationPrefs.copyWith(
+              enableSavings: enabled,
+            );
+            break;
+          case 'updates':
+            _notificationPrefs = _notificationPrefs.copyWith(
+              enableUpdates: enabled,
+            );
+            break;
+          case 'systemStatus':
+            _notificationPrefs = _notificationPrefs.copyWith(
+              enableSystemStatus: enabled,
+            );
+            break;
+        }
+      });
+
+      await ServiceLocator.instance.notificationService
+          .updateNotificationCategory(
+            token,
+            category: category,
+            enabled: enabled,
+          );
+
+      AppDialogs.showSuccessSnackBar(
+        context,
+        '$category ${enabled ? 'enabled' : 'disabled'}',
+      );
+    } catch (e) {
+      // Revert on error
+      await _loadNotificationPreferences(token);
+      AppDialogs.showErrorSnackBar(context, e.toString());
+    }
+  }
+
+  Future<void> _updateDeliveryMethodPreference(
+    String method,
+    bool enabled,
+  ) async {
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      AppDialogs.showErrorSnackBar(
+        context,
+        'Authentication required. Please login again.',
+      );
+      return;
+    }
+
+    try {
+      // Optimistic update
+      setState(() {
+        switch (method) {
+          case 'app':
+            _notificationPrefs = _notificationPrefs.copyWith(
+              enableAppNotifications: enabled,
+            );
+            break;
+          case 'email':
+            _notificationPrefs = _notificationPrefs.copyWith(
+              enableEmailNotifications: enabled,
+            );
+            break;
+          case 'sms':
+            _notificationPrefs = _notificationPrefs.copyWith(
+              enableSmsNotifications: enabled,
+            );
+            break;
+        }
+      });
+
+      await ServiceLocator.instance.notificationService.updateDeliveryMethods(
+        token,
+        enableApp: method == 'app' ? enabled : null,
+        enableEmail: method == 'email' ? enabled : null,
+        enableSms: method == 'sms' ? enabled : null,
+      );
+
+      AppDialogs.showSuccessSnackBar(
+        context,
+        'Delivery method updated',
+      );
+    } catch (e) {
+      // Revert on error
+      await _loadNotificationPreferences(token);
+      AppDialogs.showErrorSnackBar(context, e.toString());
+    }
+  }
+
+  Future<void> _updateQuietHours(bool enabled, String? start, String? end) async {
+    final token = await ServiceLocator.instance.authService.getStoredToken();
+    if (token == null || token.isEmpty) {
+      AppDialogs.showErrorSnackBar(
+        context,
+        'Authentication required. Please login again.',
+      );
+      return;
+    }
+
+    try {
+      // Optimistic update
+      setState(() {
+        _notificationPrefs = _notificationPrefs.copyWith(
+          quietHoursEnabled: enabled,
+          quietHoursStart: start,
+          quietHoursEnd: end,
+        );
+      });
+
+      await ServiceLocator.instance.notificationService.updateQuietHours(
+        token,
+        enabled: enabled,
+        startTime: start,
+        endTime: end,
+      );
+
+      AppDialogs.showSuccessSnackBar(
+        context,
+        'Quiet hours updated',
+      );
+    } catch (e) {
+      // Revert on error
+      await _loadNotificationPreferences(token);
+      AppDialogs.showErrorSnackBar(context, e.toString());
     }
   }
 
@@ -224,6 +406,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   activeColor: AppColors.primary,
                 ),
               ),
+
+              // Advanced Notification Preferences Section
+              if (!_isLoadingNotificationPrefs)
+                _NotificationPreferencesPanel(
+                  preferences: _notificationPrefs,
+                  onUpdateCategory: _updateNotificationCategoryPreference,
+                  onUpdateDeliveryMethod: _updateDeliveryMethodPreference,
+                  onUpdateQuietHours: _updateQuietHours,
+                ),
 
               _SectionHeader('Display'),
               _SettingTile(
@@ -759,6 +950,410 @@ class _LanguageTile extends StatelessWidget {
                   ))
               .toList(),
         ),
+      ),
+    );
+  }
+}
+
+class _NotificationPreferencesPanel extends StatefulWidget {
+  final NotificationPreference preferences;
+  final Function(String, bool) onUpdateCategory;
+  final Function(String, bool) onUpdateDeliveryMethod;
+  final Function(bool, String?, String?) onUpdateQuietHours;
+
+  const _NotificationPreferencesPanel({
+    required this.preferences,
+    required this.onUpdateCategory,
+    required this.onUpdateDeliveryMethod,
+    required this.onUpdateQuietHours,
+  });
+
+  @override
+  State<_NotificationPreferencesPanel> createState() =>
+      _NotificationPreferencesPanelState();
+}
+
+class _NotificationPreferencesPanelState
+    extends State<_NotificationPreferencesPanel> {
+  late bool _quietHoursEnabled;
+  late String? _quietHoursStart;
+  late String? _quietHoursEnd;
+
+  @override
+  void initState() {
+    super.initState();
+    _quietHoursEnabled = widget.preferences.quietHoursEnabled;
+    _quietHoursStart = widget.preferences.quietHoursStart;
+    _quietHoursEnd = widget.preferences.quietHoursEnd;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.paddingLG,
+        vertical: AppConstants.paddingMD,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Notification Categories
+          Container(
+            padding: const EdgeInsets.all(AppConstants.paddingMD),
+            decoration: BoxDecoration(
+              color: AppColors.cardDark,
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Notification Types',
+                  style: AppTextStyles.labelLarge.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: AppConstants.paddingMD),
+                _PreferenceToggle(
+                  title: 'Alerts',
+                  subtitle: 'System errors and critical alerts',
+                  value: widget.preferences.enableAlerts,
+                  onChanged: (v) =>
+                      widget.onUpdateCategory('alerts', v),
+                ),
+                const SizedBox(height: AppConstants.paddingSM),
+                _PreferenceToggle(
+                  title: 'Savings',
+                  subtitle: 'Financial savings and ROI updates',
+                  value: widget.preferences.enableSavings,
+                  onChanged: (v) =>
+                      widget.onUpdateCategory('savings', v),
+                ),
+                const SizedBox(height: AppConstants.paddingSM),
+                _PreferenceToggle(
+                  title: 'Updates',
+                  subtitle: 'General updates and new features',
+                  value: widget.preferences.enableUpdates,
+                  onChanged: (v) =>
+                      widget.onUpdateCategory('updates', v),
+                ),
+                const SizedBox(height: AppConstants.paddingSM),
+                _PreferenceToggle(
+                  title: 'System Status',
+                  subtitle: 'Device online/offline status',
+                  value: widget.preferences.enableSystemStatus,
+                  onChanged: (v) =>
+                      widget.onUpdateCategory('systemStatus', v),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppConstants.paddingMD),
+
+          // Delivery Methods
+          Container(
+            padding: const EdgeInsets.all(AppConstants.paddingMD),
+            decoration: BoxDecoration(
+              color: AppColors.cardDark,
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Delivery Methods',
+                  style: AppTextStyles.labelLarge.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: AppConstants.paddingMD),
+                _PreferenceToggle(
+                  title: 'In-App Notifications',
+                  subtitle: 'Show notifications in the app',
+                  value: widget.preferences.enableAppNotifications,
+                  onChanged: (v) =>
+                      widget.onUpdateDeliveryMethod('app', v),
+                ),
+                const SizedBox(height: AppConstants.paddingSM),
+                _PreferenceToggle(
+                  title: 'Email Notifications',
+                  subtitle: 'Send updates to your email',
+                  value: widget.preferences.enableEmailNotifications,
+                  onChanged: (v) =>
+                      widget.onUpdateDeliveryMethod('email', v),
+                ),
+                const SizedBox(height: AppConstants.paddingSM),
+                _PreferenceToggle(
+                  title: 'SMS Notifications',
+                  subtitle: 'Receive critical alerts via SMS',
+                  value: widget.preferences.enableSmsNotifications,
+                  onChanged: (v) =>
+                      widget.onUpdateDeliveryMethod('sms', v),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppConstants.paddingMD),
+
+          // Quiet Hours
+          Container(
+            padding: const EdgeInsets.all(AppConstants.paddingMD),
+            decoration: BoxDecoration(
+              color: AppColors.cardDark,
+              borderRadius: BorderRadius.circular(AppConstants.radiusMD),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _PreferenceToggle(
+                  title: 'Quiet Hours',
+                  subtitle: 'Mute notifications during specific times',
+                  value: _quietHoursEnabled,
+                  onChanged: (v) {
+                    setState(() {
+                      _quietHoursEnabled = v;
+                    });
+                    widget.onUpdateQuietHours(v, _quietHoursStart, _quietHoursEnd);
+                  },
+                ),
+                if (_quietHoursEnabled) ...[
+                  const SizedBox(height: AppConstants.paddingMD),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _TimePickerButton(
+                          label: 'Start Time',
+                          value: _quietHoursStart ?? '22:00',
+                          onChanged: (time) {
+                            setState(() {
+                              _quietHoursStart = time;
+                            });
+                            widget.onUpdateQuietHours(
+                              true,
+                              time,
+                              _quietHoursEnd,
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: AppConstants.paddingMD),
+                      Expanded(
+                        child: _TimePickerButton(
+                          label: 'End Time',
+                          value: _quietHoursEnd ?? '08:00',
+                          onChanged: (time) {
+                            setState(() {
+                              _quietHoursEnd = time;
+                            });
+                            widget.onUpdateQuietHours(
+                              true,
+                              _quietHoursStart,
+                              time,
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PreferenceToggle extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool value;
+  final Function(bool) onChanged;
+
+  const _PreferenceToggle({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: AppTextStyles.bodyLarge.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Switch(
+          value: value,
+          onChanged: onChanged,
+          activeColor: AppColors.primary,
+        ),
+      ],
+    );
+  }
+}
+
+class _TimePickerButton extends StatelessWidget {
+  final String label;
+  final String value;
+  final Function(String) onChanged;
+
+  const _TimePickerButton({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _showTimePickerDialog(context),
+      child: Container(
+        padding: const EdgeInsets.all(AppConstants.paddingSM),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.divider),
+          borderRadius: BorderRadius.circular(AppConstants.radiusSM),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: AppTextStyles.labelSmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showTimePickerDialog(BuildContext context) {
+    final parts = value.split(':');
+    int hour = int.tryParse(parts[0]) ?? 22;
+    int minute = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardDark,
+        title: Text(label, style: AppTextStyles.headingMedium),
+        content: SizedBox(
+          width: 300,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Hour
+                  SizedBox(
+                    width: 80,
+                    child: TextField(
+                      controller: TextEditingController(
+                        text: hour.toString().padLeft(2, '0'),
+                      ),
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.headingLarge,
+                      onChanged: (v) {
+                        hour = int.tryParse(v) ?? hour;
+                        if (hour > 23) hour = 23;
+                        if (hour < 0) hour = 0;
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'HH',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppConstants.radiusMD,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    ':',
+                    style: AppTextStyles.headingLarge,
+                  ),
+                  const SizedBox(width: 8),
+                  // Minute
+                  SizedBox(
+                    width: 80,
+                    child: TextField(
+                      controller: TextEditingController(
+                        text: minute.toString().padLeft(2, '0'),
+                      ),
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.headingLarge,
+                      onChanged: (v) {
+                        minute = int.tryParse(v) ?? minute;
+                        if (minute > 59) minute = 59;
+                        if (minute < 0) minute = 0;
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'MM',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppConstants.radiusMD,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final timeStr =
+                  '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+              onChanged(timeStr);
+              Navigator.pop(ctx);
+            },
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Set'),
+          ),
+        ],
       ),
     );
   }
