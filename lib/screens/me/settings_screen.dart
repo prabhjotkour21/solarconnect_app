@@ -192,9 +192,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (_, __, ___) => ValueListenableBuilder<String>(
         valueListenable: appLanguage,
         builder: (_, ___, ____) => Scaffold(
-          backgroundColor: AppColors.backgroundDark,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
-            backgroundColor: AppColors.surfaceDark,
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
             elevation: 0,
             title: Text('Settings', style: AppTextStyles.headingLarge),
             leading: IconButton(
@@ -347,7 +347,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cardDark,
+        backgroundColor: Theme.of(ctx).colorScheme.surfaceContainerHighest,
         title: Text('Clear Cache?', style: AppTextStyles.headingMedium),
         content: Text(
           'This will clear temporary data and free up 245 MB of space.',
@@ -366,7 +366,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 context: context,
                 barrierDismissible: false,
                 builder: (_) => const AlertDialog(
-                  backgroundColor: AppColors.cardDark,
                   content: Row(
                     children: [
                       CircularProgressIndicator(),
