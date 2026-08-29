@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../main.dart';
-import '../../models/notification_preference.dart';
 import '../../services/service_locator.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
@@ -29,50 +28,11 @@ class _MeScreenState extends State<MeScreen> {
   Map<String, dynamic> _primaryInverter = {};
   String _inverterStatus = 'offline';
   bool _isLoadingProfile = true;
-  
-  // Dynamic notification preferences
-  NotificationPreference? _notificationPrefs;
-  bool _isLoadingNotificationPrefs = false;
 
   @override
   void initState() {
     super.initState();
     _loadUserProfile();
-    _loadNotificationPreferences();
-  }
-
-  Future<void> _loadNotificationPreferences() async {
-    setState(() {
-      _isLoadingNotificationPrefs = true;
-    });
-
-    final token = await ServiceLocator.instance.authService.getStoredToken();
-    if (token == null || token.isEmpty) {
-      setState(() {
-        _isLoadingNotificationPrefs = false;
-        _notificationPrefs = NotificationPreference.defaultPreferences();
-      });
-      return;
-    }
-
-    try {
-      final prefs = await ServiceLocator.instance.notificationService
-          .getNotificationPreferences(token);
-      if (mounted) {
-        setState(() {
-          _notificationPrefs = prefs;
-          _isLoadingNotificationPrefs = false;
-        });
-      }
-    } catch (e) {
-      print('[ME_SCREEN] Error loading notification preferences: $e');
-      if (mounted) {
-        setState(() {
-          _notificationPrefs = NotificationPreference.defaultPreferences();
-          _isLoadingNotificationPrefs = false;
-        });
-      }
-    }
   }
 
   Future<void> _loadUserProfile() async {
@@ -567,30 +527,23 @@ class _MeScreenState extends State<MeScreen> {
                         const SizedBox(height: AppConstants.paddingMD),
                         const _SectionLabel('Help & Support'),
                         _MenuGroup(
-                          items: [
+                          items: const [
                             _MenuItem(
                               Icons.notifications_outlined,
                               'Notifications',
-                              _notificationPrefs != null
-                                  ? (_notificationPrefs!.enableAppNotifications
-                                      ? 'View all alerts • Enabled'
-                                      : 'Notifications disabled')
-                                  : 'View all alerts',
-                              notificationEnabled:
-                                  _notificationPrefs?.enableAppNotifications ??
-                                      true,
+                              'View all alerts',
                             ),
-                            const _MenuItem(
+                            _MenuItem(
                               Icons.help_outline_rounded,
                               'FAQ',
                               'Common questions answered',
                             ),
-                            const _MenuItem(
+                            _MenuItem(
                               Icons.chat_bubble_outline_rounded,
                               'Contact Support',
                               'Get help from our team',
                             ),
-                            const _MenuItem(
+                            _MenuItem(
                               Icons.description_outlined,
                               'User Guide',
                               'How to use SolarConnect',
@@ -909,14 +862,11 @@ class _MenuItem {
   final String title;
   final String subtitle;
   final bool isDestructive;
-  final bool? notificationEnabled;
-  
   const _MenuItem(
     this.icon,
     this.title,
     this.subtitle, {
     this.isDestructive = false,
-    this.notificationEnabled,
   });
 }
 
@@ -1003,29 +953,7 @@ class _MenuGroup extends StatelessWidget {
                             ],
                           ),
                         ),
-                        // Show badge for disabled notifications
-                        if (item.notificationEnabled == false)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.warning.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: AppColors.warning.withValues(alpha: 0.3),
-                              ),
-                            ),
-                            child: Text(
-                              'Disabled',
-                              style: AppTextStyles.labelSmall.copyWith(
-                                color: AppColors.warning,
-                                fontSize: 11,
-                              ),
-                            ),
-                          )
-                        else if (!item.isDestructive)
+                        if (!item.isDestructive)
                           Icon(
                             Icons.chevron_right_rounded,
                             color: cs.onSurfaceVariant,
