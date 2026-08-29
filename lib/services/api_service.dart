@@ -15,10 +15,18 @@ class ApiService {
       return uri;
     }
 
-    return uri.replace(queryParameters: queryParams.map((key, value) => MapEntry(key, value.toString())));
+    return uri.replace(
+      queryParameters: queryParams.map(
+        (key, value) => MapEntry(key, value.toString()),
+      ),
+    );
   }
 
-  Future<Map<String, dynamic>> get(String path, {Map<String, dynamic>? queryParams, String? token}) async {
+  Future<Map<String, dynamic>> get(
+    String path, {
+    Map<String, dynamic>? queryParams,
+    String? token,
+  }) async {
     final response = await _client.get(
       _uri(path, queryParams),
       headers: _headers(token),
@@ -34,7 +42,9 @@ class ApiService {
     String? token,
   }) async {
     final uri = _uri(path, queryParams);
-    debugPrint('API POST: $uri tokenPresent:${token != null} body:${body ?? ''}');
+    debugPrint(
+      'API POST: $uri tokenPresent:${token != null} body:${body ?? ''}',
+    );
     final response = await _client.post(
       uri,
       headers: _headers(token),
@@ -51,6 +61,21 @@ class ApiService {
     String? token,
   }) async {
     final response = await _client.put(
+      _uri(path, queryParams),
+      headers: _headers(token),
+      body: body == null ? null : jsonEncode(body),
+    );
+
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> patch(
+    String path, {
+    Object? body,
+    Map<String, dynamic>? queryParams,
+    String? token,
+  }) async {
+    final response = await _client.patch(
       _uri(path, queryParams),
       headers: _headers(token),
       body: body == null ? null : jsonEncode(body),
