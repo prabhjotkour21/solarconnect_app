@@ -38,10 +38,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
     }
 
     try {
-      final response = await ServiceLocator.instance.insightsService.getInsights(
-        token,
-        queryParams: {'granularity': 'daily'},
-      );
+      final response = await ServiceLocator.instance.insightsService
+          .getInsights(token, queryParams: {'granularity': 'daily'});
 
       final summary = response['summary'] as Map<String, dynamic>? ?? {};
       final series = response['series'] as List<dynamic>? ?? [];
@@ -62,9 +60,9 @@ class _InsightsScreenState extends State<InsightsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.backgroundDark,
-        body: Center(child: CircularProgressIndicator()),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -86,7 +84,9 @@ class _InsightsScreenState extends State<InsightsScreen> {
             child: Text(
               _errorMessage!,
               textAlign: TextAlign.center,
-              style: AppTextStyles.headingSmall.copyWith(color: AppColors.error),
+              style: AppTextStyles.headingSmall.copyWith(
+                color: AppColors.error,
+              ),
             ),
           ),
         ),
@@ -123,8 +123,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
         ? '0.0 kW'
         : '${_series.map((item) => (item['generated'] ?? 0).toDouble()).reduce((a, b) => a > b ? a : b).toStringAsFixed(1)} kW';
 
-    final batteryLevel = (_summary['batteryCharging']?['averageBatteryLevel'] ?? 0).toDouble();
-    final gridExport = (_summary['gridUsage']?['totalGridSupply'] ?? 0).toDouble();
+    final batteryLevel =
+        (_summary['batteryCharging']?['averageBatteryLevel'] ?? 0).toDouble();
+    final gridExport = (_summary['gridUsage']?['totalGridSupply'] ?? 0)
+        .toDouble();
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
       appBar: AppBar(
@@ -185,10 +187,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            Text(
-              'Weekly Comparison',
-              style: AppTextStyles.headingMedium,
-            ),
+            Text('Weekly Comparison', style: AppTextStyles.headingMedium),
             const SizedBox(height: 12),
             if (comparisonItems.isEmpty)
               Container(
@@ -207,7 +206,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
               )
             else
               ...comparisonItems.map((item) {
-                final percentage = (item['percentage'] as double).clamp(0.0, 100.0);
+                final percentage = (item['percentage'] as double).clamp(
+                  0.0,
+                  100.0,
+                );
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(12),
@@ -256,9 +258,13 @@ class _InsightsScreenState extends State<InsightsScreen> {
                               child: LinearProgressIndicator(
                                 value: percentage / 100,
                                 minHeight: 6,
-                                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                backgroundColor: AppColors.primary.withValues(
+                                  alpha: 0.1,
+                                ),
                                 valueColor: AlwaysStoppedAnimation(
-                                  percentage >= 60 ? AppColors.success : AppColors.warning,
+                                  percentage >= 60
+                                      ? AppColors.success
+                                      : AppColors.warning,
                                 ),
                               ),
                             ),
@@ -270,10 +276,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 );
               }).toList(),
             const SizedBox(height: 24),
-            Text(
-              'Key Metrics',
-              style: AppTextStyles.headingMedium,
-            ),
+            Text('Key Metrics', style: AppTextStyles.headingMedium),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -349,11 +352,7 @@ class _MetricCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            color: AppColors.primary,
-            size: 24,
-          ),
+          Icon(icon, color: AppColors.primary, size: 24),
           const SizedBox(height: 8),
           Text(
             label,
