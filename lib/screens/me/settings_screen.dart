@@ -36,11 +36,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     try {
-      final notificationsResponse = await ServiceLocator.instance.settingsService.getNotificationSettings(token);
-      final appearanceResponse = await ServiceLocator.instance.settingsService.getAppearanceSettings(token);
-      final privacyResponse = await ServiceLocator.instance.settingsService.getPrivacySettings(token);
+      final notificationsResponse = await ServiceLocator
+          .instance
+          .settingsService
+          .getNotificationSettings(token);
+      final appearanceResponse = await ServiceLocator.instance.settingsService
+          .getAppearanceSettings(token);
+      final privacyResponse = await ServiceLocator.instance.settingsService
+          .getPrivacySettings(token);
 
-      final notificationData = notificationsResponse['data'] ?? notificationsResponse;
+      final notificationData =
+          notificationsResponse['data'] ?? notificationsResponse;
       final appearanceData = appearanceResponse['data'] ?? appearanceResponse;
       final privacyData = privacyResponse['data'] ?? privacyResponse;
 
@@ -53,7 +59,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final theme = appearanceData['theme']?.toString();
         final language = appearanceData['language']?.toString();
         if (theme != null) {
-          appThemeMode.value = theme.toLowerCase() == 'dark' ? ThemeMode.dark : ThemeMode.light;
+          appThemeMode.value = theme.toLowerCase() == 'dark'
+              ? ThemeMode.dark
+              : ThemeMode.light;
         }
         if (language != null) {
           appLanguage.value = _languageLabelFromCode(language);
@@ -118,7 +126,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _isSavingPreferences = false;
       });
-      AppDialogs.showErrorSnackBar(context, 'Authentication required. Please login again.');
+      AppDialogs.showErrorSnackBar(
+        context,
+        'Authentication required. Please login again.',
+      );
       return;
     }
 
@@ -127,7 +138,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         token,
         notifications: value,
       );
-      AppDialogs.showSuccessSnackBar(context, 'Notification preferences saved.');
+      AppDialogs.showSuccessSnackBar(
+        context,
+        'Notification preferences saved.',
+      );
     } catch (e) {
       setState(() {
         _notificationsEnabled = !value;
@@ -143,7 +157,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _updateAppearancePreference(bool value) async {
     final token = await ServiceLocator.instance.authService.getStoredToken();
     if (token == null || token.isEmpty) {
-      AppDialogs.showErrorSnackBar(context, 'Authentication required. Please login again.');
+      AppDialogs.showErrorSnackBar(
+        context,
+        'Authentication required. Please login again.',
+      );
       return;
     }
 
@@ -162,10 +179,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {});
   }
 
-  Future<void> _updatePrivacyPreference({required bool allowDataSharing, required bool analyticsOptIn}) async {
+  Future<void> _updatePrivacyPreference({
+    required bool allowDataSharing,
+    required bool analyticsOptIn,
+  }) async {
     final token = await ServiceLocator.instance.authService.getStoredToken();
     if (token == null || token.isEmpty) {
-      AppDialogs.showErrorSnackBar(context, 'Authentication required. Please login again.');
+      AppDialogs.showErrorSnackBar(
+        context,
+        'Authentication required. Please login again.',
+      );
       return;
     }
 
@@ -198,7 +221,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             elevation: 0,
             title: Text('Settings', style: AppTextStyles.headingLarge),
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+              icon: Icon(Icons.arrow_back, color: AppColors.textPrimary),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -211,7 +234,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 subtitle: 'Receive alerts for energy insights',
                 trailing: Switch(
                   value: _notificationsEnabled,
-                  onChanged: _isSavingPreferences ? null : _updateNotificationPreference,
+                  onChanged: _isSavingPreferences
+                      ? null
+                      : _updateNotificationPreference,
                   activeColor: AppColors.primary,
                 ),
               ),
@@ -248,12 +273,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   appLanguage.value = lang;
                   setState(() {});
 
-                  final token = await ServiceLocator.instance.authService.getStoredToken();
+                  final token = await ServiceLocator.instance.authService
+                      .getStoredToken();
                   if (token != null && token.isNotEmpty) {
-                    await ServiceLocator.instance.settingsService.updateAppearanceSettings(
-                      token,
-                      language: _languageCodeFromLabel(lang),
-                    );
+                    await ServiceLocator.instance.settingsService
+                        .updateAppearanceSettings(
+                          token,
+                          language: _languageCodeFromLabel(lang),
+                        );
                   }
 
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -284,7 +311,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _SettingTile(
                 icon: Icons.share_outlined,
                 title: 'Data Sharing',
-                subtitle: 'Allow anonymized data sharing for system improvements',
+                subtitle:
+                    'Allow anonymized data sharing for system improvements',
                 trailing: Switch(
                   value: _allowDataSharing,
                   onChanged: (v) => _updatePrivacyPreference(
@@ -417,10 +445,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.insert_drive_file, color: AppColors.primary, size: 20),
+                  Icon(
+                    Icons.insert_drive_file,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
-                  Text('SolarConnect_Energy_2026.csv',
-                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary)),
+                  Text(
+                    'SolarConnect_Energy_2026.csv',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.primary,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -443,12 +479,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const LinearProgressIndicator(
+                      LinearProgressIndicator(
                         color: AppColors.primary,
                         backgroundColor: AppColors.surfaceDark,
                       ),
                       const SizedBox(height: 16),
-                      Text('Exporting data...', style: AppTextStyles.bodyMedium),
+                      Text(
+                        'Exporting data...',
+                        style: AppTextStyles.bodyMedium,
+                      ),
                     ],
                   ),
                 ),
@@ -474,7 +513,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: AppColors.cardDark,
         title: Row(
           children: [
-            const Icon(Icons.check_circle, color: AppColors.success),
+            Icon(Icons.check_circle, color: AppColors.success),
             const SizedBox(width: 8),
             Text('Export Complete', style: AppTextStyles.headingMedium),
           ],
@@ -483,24 +522,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Your data has been exported successfully.',
-                style: AppTextStyles.bodyMedium),
+            Text(
+              'Your data has been exported successfully.',
+              style: AppTextStyles.bodyMedium,
+            ),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppColors.success.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppConstants.radiusMD),
-                border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppColors.success.withValues(alpha: 0.3),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('📄 SolarConnect_Energy_2026.csv',
-                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.success)),
+                  Text(
+                    '📄 SolarConnect_Energy_2026.csv',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.success,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('Size: 1.2 MB  •  365 records',
-                      style: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary)),
+                  Text(
+                    'Size: 1.2 MB  •  365 records',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -582,15 +633,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             TextField(
               obscureText: true,
-              style: const TextStyle(color: AppColors.textPrimary),
+              style: TextStyle(color: AppColors.textPrimary),
               decoration: InputDecoration(
                 hintText: 'Current Password',
-                hintStyle: const TextStyle(color: AppColors.textSecondary),
+                hintStyle: TextStyle(color: AppColors.textSecondary),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: AppColors.divider),
+                  borderSide: BorderSide(color: AppColors.divider),
                   borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                 ),
               ),
@@ -598,15 +649,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: AppConstants.paddingMD),
             TextField(
               obscureText: true,
-              style: const TextStyle(color: AppColors.textPrimary),
+              style: TextStyle(color: AppColors.textPrimary),
               decoration: InputDecoration(
                 hintText: 'New Password',
-                hintStyle: const TextStyle(color: AppColors.textSecondary),
+                hintStyle: TextStyle(color: AppColors.textSecondary),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: AppColors.divider),
+                  borderSide: BorderSide(color: AppColors.divider),
                   borderRadius: BorderRadius.circular(AppConstants.radiusMD),
                 ),
               ),
@@ -652,7 +703,9 @@ class _SectionHeader extends StatelessWidget {
       ),
       child: Text(
         title,
-        style: AppTextStyles.labelLarge.copyWith(color: AppColors.textSecondary),
+        style: AppTextStyles.labelLarge.copyWith(
+          color: AppColors.textSecondary,
+        ),
       ),
     );
   }
@@ -671,7 +724,8 @@ class _SettingTile extends StatelessWidget {
     this.subtitle,
     this.trailing,
     this.onTap,
-  });
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -686,7 +740,8 @@ class _SettingTile extends StatelessWidget {
         subtitle: subtitle != null
             ? Text(subtitle!, style: AppTextStyles.bodySmall)
             : null,
-        trailing: trailing ??
+        trailing:
+            trailing ??
             (onTap != null ? const Icon(Icons.chevron_right) : null),
         onTap: onTap,
         tileColor: AppColors.cardDark,
@@ -719,7 +774,7 @@ class _LanguageTile extends StatelessWidget {
         vertical: 4,
       ),
       child: ListTile(
-        leading: const Icon(Icons.language, color: AppColors.primary),
+        leading: Icon(Icons.language, color: AppColors.primary),
         title: Text('Language', style: AppTextStyles.bodyLarge),
         subtitle: Text(selectedLanguage, style: AppTextStyles.bodySmall),
         trailing: const Icon(Icons.chevron_right),
@@ -745,18 +800,20 @@ class _LanguageTile extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: ['English', 'Spanish', 'French', 'German', 'Hindi']
-              .map((lang) => ListTile(
-                    title: Text(lang, style: AppTextStyles.bodyLarge),
-                    leading: Radio<String>(
-                      value: lang,
-                      groupValue: selectedLanguage,
-                      onChanged: (value) {
-                        onChanged(value!);
-                        Navigator.pop(ctx);
-                      },
-                      activeColor: AppColors.primary,
-                    ),
-                  ))
+              .map(
+                (lang) => ListTile(
+                  title: Text(lang, style: AppTextStyles.bodyLarge),
+                  leading: Radio<String>(
+                    value: lang,
+                    groupValue: selectedLanguage,
+                    onChanged: (value) {
+                      onChanged(value!);
+                      Navigator.pop(ctx);
+                    },
+                    activeColor: AppColors.primary,
+                  ),
+                ),
+              )
               .toList(),
         ),
       ),
