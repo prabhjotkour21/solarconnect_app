@@ -97,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.bolt_rounded,
                       size: 56,
                       color: AppColors.primary,
@@ -120,14 +120,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       controller: _emailController,
                       style: const TextStyle(color: Colors.black87),
                       keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Email',
                         hintText: 'Enter your email',
                         labelStyle: TextStyle(color: AppColors.textSecondary),
                         hintStyle: TextStyle(color: AppColors.textSecondary),
                         filled: true,
-                        fillColor: Color(0xFFF4F6F9),
-                        border: OutlineInputBorder(
+                        fillColor: const Color(0xFFF4F6F9),
+                        border: const OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(12)),
                         ),
                       ),
@@ -142,12 +142,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: InputDecoration(
                         labelText: 'Password',
                         hintText: 'Enter your password',
-                        labelStyle: const TextStyle(
-                          color: AppColors.textSecondary,
-                        ),
-                        hintStyle: const TextStyle(
-                          color: AppColors.textSecondary,
-                        ),
+                        labelStyle: TextStyle(color: AppColors.textSecondary),
+                        hintStyle: TextStyle(color: AppColors.textSecondary),
                         filled: true,
                         fillColor: const Color(0xFFF4F6F9),
                         border: const OutlineInputBorder(
