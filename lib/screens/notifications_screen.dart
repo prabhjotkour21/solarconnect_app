@@ -109,6 +109,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       final response = await ServiceLocator.instance.notificationService
           .getNotifications(token, queryParams: {'limit': 50});
 
+        debugPrint('Notifications API response: $response');
+
       final rawData = response['data'];
       final notifications = <NotificationItem>[];
       if (rawData is List) {
@@ -123,8 +125,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         }
       }
 
+      debugPrint(
+        'Notifications parsed: ${notifications.length}, raw data type: ${rawData.runtimeType}',
+      );
+
       final unreadCount = await ServiceLocator.instance.notificationService
           .getUnreadCount(token);
+
+      debugPrint('Notifications unread count: $unreadCount');
 
       setState(() {
         _notifications
