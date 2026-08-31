@@ -15,9 +15,9 @@ abstract class AppConstants {
       return 'http://localhost:5000/api/v1';
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
-      //return 'http://10.0.2.2:3000/api/v1';
+      return 'http://10.0.2.2:3000/api/v1';
       //192.168.1.5
-      return 'http://192.168.1.12:3000/api/v1';
+      // return 'http://192.168.1.12:3000/api/v1';
     }
     return 'http://localhost:5000/api/v1';
   }
