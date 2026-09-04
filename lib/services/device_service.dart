@@ -29,4 +29,8 @@ class DeviceService {
   Future<Map<String, dynamic>> getDevices(String token) async {
     return _apiService.get('/devices', token: token);
   }
+
+  Future<Map<String, dynamic>> getConnectionStatus(String deviceId, String token) async {
+    return _apiService.get('/devices/$deviceId/connection-status', token: token);
+  }
 }
