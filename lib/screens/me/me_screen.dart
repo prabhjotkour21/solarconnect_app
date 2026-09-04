@@ -15,6 +15,7 @@ import '../notifications_screen.dart';
 import '../inverter_setup_screen.dart';
 import '../wifi_config_screen.dart';
 import '../device_register_screen.dart';
+import '../device_configuration_screen.dart';
 
 class MeScreen extends StatefulWidget {
   const MeScreen({super.key});
@@ -281,6 +282,9 @@ class _MeScreenState extends State<MeScreen> {
           MaterialPageRoute(builder: (_) => const DeviceRegisterScreen()),
         );
         break;
+      case 'Device Configuration':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const DeviceConfigurationScreen()));
+        break;
       case 'Share App':
         AppDialogs.showShareDialog(context);
         break;
@@ -520,6 +524,11 @@ class _MeScreenState extends State<MeScreen> {
                               Icons.wifi_rounded,
                               'Wi-Fi Configuration',
                               'Connect to network',
+                            ),
+                            _MenuItem(
+                              Icons.tune_rounded,
+                              'Device Configuration',
+                              'Edit device parameters',
                             ),
                           ],
                           onItemTap: (item) => _handleMenuTap(context, item),
