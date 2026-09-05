@@ -3,6 +3,7 @@ import '../models/device_parameter.dart';
 import '../services/service_locator.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../validation/parameter_validation.dart';
 
 class DeviceConfigurationScreen extends StatefulWidget {
   const DeviceConfigurationScreen({super.key});
@@ -14,11 +15,16 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
   List<Map<String, dynamic>> _devices = [];
   List<DeviceParameter> _parameters = [];
   Map<int, dynamic> _editedValues = {};
+  final Map<int, TextEditingController> _controllers = {};
+  final Map<int, String?> _validationErrors = {};
   Map<String, dynamic> _status = {};
   String? _selectedDeviceId;
   bool _loading = true;
   String? _error;
+  String? _sendMessage;
+  bool _sending = false;
   bool get _hasChanges => _editedValues.isNotEmpty;
+  bool get _canSend => _hasChanges && !_sending && _validationErrors.values.every((error) => error == null);
 
   @override
   void initState() { super.initState(); _loadDevices(); }
@@ -42,7 +48,9 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
   Future<void> _selectDevice(String id, [String? knownToken]) async {
     final token = knownToken ?? await ServiceLocator.instance.authService.getStoredToken();
     if (token == null || token.isEmpty || id.isEmpty) return;
-    setState(() { _selectedDeviceId = id; _loading = true; _error = null; _editedValues = {}; });
+    for (final controller in _controllers.values) controller.dispose();
+    _controllers.clear();
+    setState(() { _selectedDeviceId = id; _loading = true; _error = null; _sendMessage = null; _editedValues = {}; _validationErrors.clear(); });
     try {
       final results = await Future.wait([
         ServiceLocator.instance.parameterService.loadDefinitions(id, token),
@@ -68,15 +76,53 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
 
   String _display(dynamic value) => value == null ? '-' : '$value';
 
-  void _changeValue(DeviceParameter parameter, String text) {
-    dynamic value = text;
-    final type = parameter.dataType.toUpperCase();
-    if (type == 'BOOL') value = text.toLowerCase() == 'true';
-    if (type.startsWith('INT') || type.startsWith('UINT')) value = int.tryParse(text) ?? text;
-    if (type.startsWith('FLOAT')) value = double.tryParse(text) ?? text;
-    final original = parameter.currentValue ?? parameter.lastSentValue;
-    setState(() { if ('$value' == '$original') _editedValues.remove(parameter.parameterNumber); else _editedValues[parameter.parameterNumber] = value; });
+  TextEditingController _controllerFor(DeviceParameter parameter) {
+    return _controllers.putIfAbsent(parameter.parameterNumber, () => TextEditingController(text: parameter.currentValue == null ? '' : '${parameter.currentValue}'));
   }
+
+  dynamic _typedValue(DeviceParameter parameter, String text) {
+    final type = parameter.dataType.toUpperCase();
+    if (type == 'BOOL' || type == 'BOOLEAN') return text.trim().toLowerCase() == 'true';
+    if (type.startsWith('INT') || type.startsWith('UINT') || type == 'INTEGER') return int.tryParse(text.trim()) ?? text.trim();
+    if (type.startsWith('FLOAT') || type == 'DOUBLE' || type == 'DECIMAL') return double.tryParse(text.trim()) ?? text.trim();
+    return text;
+  }
+
+  void _changeValue(DeviceParameter parameter, String text) {
+    final error = ParameterValidator.validate(parameter, text);
+    final value = _typedValue(parameter, text);
+    final original = parameter.currentValue ?? parameter.lastSentValue;
+    setState(() {
+      _validationErrors[parameter.parameterNumber] = error;
+      if ('$value' == '$original' && text.trim().isNotEmpty) _editedValues.remove(parameter.parameterNumber); else _editedValues[parameter.parameterNumber] = value;
+    });
+  }
+
+  void _clearValue(DeviceParameter parameter) {
+    _controllerFor(parameter).clear();
+    _changeValue(parameter, '');
+  }
+
+  Future<void> _sendParameters() async {
+    for (final parameter in _parameters) _changeValue(parameter, _controllerFor(parameter).text);
+    if (!_canSend || _selectedDeviceId == null) return;
+    setState(() { _sending = true; _sendMessage = null; });
+    try {
+      final token = await ServiceLocator.instance.authService.getStoredToken();
+      if (token == null || token.isEmpty) throw Exception('Authentication required.');
+      final items = _parameters.where((parameter) => _controllerFor(parameter).text.trim().isNotEmpty).map((parameter) => {'parameterNumber': parameter.parameterNumber, 'value': _typedValue(parameter, _controllerFor(parameter).text)}).toList();
+      final response = await ServiceLocator.instance.parameterService.validateParameters(_selectedDeviceId!, token, items);
+      if (response['valid'] != true) throw Exception('One or more parameter values failed server validation.');
+      if (mounted) setState(() => _sendMessage = 'All parameter values are valid and ready to send.');
+    } catch (error) {
+      if (mounted) setState(() => _sendMessage = error.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  void dispose() { for (final controller in _controllers.values) controller.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +145,10 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
         if (!_loading && _parameters.isNotEmpty) ...[
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Parameters', style: AppTextStyles.headingSmall), Text(_hasChanges ? '${_editedValues.length} modified' : 'No changes', style: TextStyle(color: _hasChanges ? AppColors.warning : AppColors.success))]),
           const SizedBox(height: 8), ..._parameters.map(_parameterTile),
+          const SizedBox(height: 8),
+          if (_sendMessage != null) Text(_sendMessage!, style: TextStyle(color: _sendMessage!.startsWith('All') ? AppColors.success : AppColors.error)),
+          const SizedBox(height: 8),
+          Align(alignment: Alignment.centerRight, child: FilledButton.icon(onPressed: _canSend ? _sendParameters : null, icon: _sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send_rounded), label: const Text('Send'))),
         ],
       ])),
     );
@@ -106,13 +156,19 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
 
   Widget _parameterTile(DeviceParameter parameter) {
     final changed = _editedValues.containsKey(parameter.parameterNumber);
-    final value = changed ? _editedValues[parameter.parameterNumber] : parameter.currentValue;
+    final controller = _controllerFor(parameter);
+    final error = _validationErrors[parameter.parameterNumber];
     return Card(color: changed ? AppColors.primary.withValues(alpha: .12) : null, child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [Text('#${parameter.parameterNumber}', style: AppTextStyles.labelSmall), const SizedBox(width: 8), Expanded(child: Text(parameter.parameterName, style: AppTextStyles.headingSmall)), if (changed) const Icon(Icons.edit_rounded, size: 16, color: AppColors.warning)]),
+      Row(children: [Text('#${parameter.parameterNumber}', style: AppTextStyles.labelSmall), const SizedBox(width: 8), Expanded(child: Text('${parameter.parameterName}${parameter.isRequired ? ' *' : ''}', style: AppTextStyles.headingSmall)), if (changed) const Icon(Icons.edit_rounded, size: 16, color: AppColors.warning)]),
       Text('${parameter.dataType}  ${parameter.unit ?? ''}  |  ${_display(parameter.minValue)} - ${_display(parameter.maxValue)}', style: AppTextStyles.bodySmall),
       const SizedBox(height: 8),
-      TextFormField(initialValue: _display(value), keyboardType: parameter.dataType.toUpperCase() == 'STRING' ? TextInputType.text : const TextInputType.numberWithOptions(decimal: true), onChanged: (text) => _changeValue(parameter, text), decoration: InputDecoration(labelText: 'Current value', helperText: 'Last sent: ${_display(parameter.lastSentValue)}')),
+      TextFormField(controller: controller, keyboardType: _isTextParameter(parameter) ? TextInputType.text : const TextInputType.numberWithOptions(decimal: true), onChanged: (text) => _changeValue(parameter, text), decoration: InputDecoration(labelText: 'Current value', helperText: 'Last sent: ${_display(parameter.lastSentValue)}', errorText: error, errorMaxLines: 2, suffixIcon: IconButton(tooltip: 'Clear value', onPressed: controller.text.isEmpty ? null : () => _clearValue(parameter), icon: const Icon(Icons.clear_rounded))),),
     ])));
+  }
+
+  bool _isTextParameter(DeviceParameter parameter) {
+    final type = parameter.dataType.toUpperCase();
+    return type == 'STRING' || type == 'TEXT' || type == 'BOOL' || type == 'BOOLEAN';
   }
 }
 
