@@ -293,14 +293,7 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
             const SizedBox(height: AppConstants.paddingSM),
             _buildTextField(_descriptionController, 'Description (optional)', 'Main inverter ESP32'),
             const SizedBox(height: AppConstants.paddingSM),
-            TextField(
-              controller: _wifiSsidController,
-              decoration: const InputDecoration(
-                labelText: 'Home Wi-Fi SSID (optional)',
-                hintText: 'Enter or select your home network',
-              ),
-              textInputAction: TextInputAction.next,
-            ),
+            _buildTextField(_wifiSsidController, 'Home Wi-Fi SSID (optional)', 'Enter your home Wi-Fi name'),
             const SizedBox(height: AppConstants.paddingMD),
             ElevatedButton(
               onPressed: _isRegistering ? null : _registerDevice,
@@ -329,6 +322,8 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
                       '3. Select your home Wi-Fi and enter its password.',
                       style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
                     ),
+                    const SizedBox(height: AppConstants.paddingSM),
+                    _buildTextField(_wifiSsidController, 'Home Wi-Fi SSID', 'Type your home Wi-Fi name'),
                     const SizedBox(height: AppConstants.paddingSM),
                     Row(
                       children: [
