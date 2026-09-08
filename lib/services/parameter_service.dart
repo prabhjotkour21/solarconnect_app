@@ -7,4 +7,13 @@ class ParameterService {
   Future<Map<String, dynamic>> loadDefinitions(String deviceId, String token) => _apiService.post('/devices/$deviceId/parameters/load', token: token);
   Future<Map<String, dynamic>> getCurrentValues(String deviceId, String token) => _apiService.post('/devices/$deviceId/parameters/current-values', token: token);
   Future<Map<String, dynamic>> validateParameters(String deviceId, String token, List<Map<String, dynamic>> items) => _apiService.post('/devices/$deviceId/parameters/validate', token: token, body: {'items': items});
+  Future<Map<String, dynamic>> generateConfiguration(String deviceId, String token, List<Map<String, dynamic>> items, {String? fileName, int chunkSize = 4096}) => _apiService.post(
+    '/devices/$deviceId/parameters/generate',
+    token: token,
+    body: {
+      'items': items,
+      'chunkSize': chunkSize,
+      if (fileName != null && fileName.isNotEmpty) 'fileName': fileName,
+    },
+  );
 }
