@@ -51,10 +51,6 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
       if (!mounted) return;
       setState(() {
         _wifiNetworks = networks;
-        if (_wifiSsidController.text.isNotEmpty &&
-            !networks.any((network) => network.ssid == _wifiSsidController.text)) {
-          _wifiSsidController.clear();
-        }
       });
     } catch (e) {
       if (!mounted) return;
@@ -296,6 +292,15 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
             _buildTextField(_locationController, 'Location (optional)', 'Rooftop North'),
             const SizedBox(height: AppConstants.paddingSM),
             _buildTextField(_descriptionController, 'Description (optional)', 'Main inverter ESP32'),
+            const SizedBox(height: AppConstants.paddingSM),
+            TextField(
+              controller: _wifiSsidController,
+              decoration: const InputDecoration(
+                labelText: 'Home Wi-Fi SSID (optional)',
+                hintText: 'Enter or select your home network',
+              ),
+              textInputAction: TextInputAction.next,
+            ),
             const SizedBox(height: AppConstants.paddingMD),
             ElevatedButton(
               onPressed: _isRegistering ? null : _registerDevice,
@@ -329,7 +334,9 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: _wifiSsidController.text.isEmpty ? null : _wifiSsidController.text,
+                            value: _wifiNetworks.any((network) => network.ssid == _wifiSsidController.text)
+                                ? _wifiSsidController.text
+                                : null,
                             decoration: const InputDecoration(labelText: 'Home Wi-Fi SSID'),
                             items: _wifiNetworks
                                 .map((network) => DropdownMenuItem<String>(
