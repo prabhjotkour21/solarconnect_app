@@ -7,7 +7,7 @@ class DeviceService {
 
   Future<Map<String, dynamic>> registerDevice({
     required String serialNumber,
-    required String macAddress,
+    required String deviceId,
     String? firmwareVersion,
     String? location,
     String? description,
@@ -17,7 +17,7 @@ class DeviceService {
       '/devices/register',
       body: {
         'serialNumber': serialNumber,
-        'macAddress': macAddress,
+        'deviceId': deviceId,
         if (firmwareVersion != null && firmwareVersion.isNotEmpty) 'firmwareVersion': firmwareVersion,
         if (location != null && location.isNotEmpty) 'location': location,
         if (description != null && description.isNotEmpty) 'description': description,
