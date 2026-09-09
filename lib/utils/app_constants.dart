@@ -13,18 +13,19 @@ abstract class AppConstants {
   static String get apiBaseUrl {
     const String configured = String.fromEnvironment(
       'API_BASE_URL',
-      defaultValue: 'http://192.168.1.8:5000/api/v1',
+      defaultValue: 'http://192.168.1.10:3000/api/v1',
+      //defaultValue: 'http://10.0.2.2:3000/api/v1',
     );
 
     if (kIsWeb) {
-      return 'http://localhost:5000/api/v1';
+      return 'http://localhost:3000/api/v1';
     }
 
     if (defaultTargetPlatform == TargetPlatform.android) {
       return configured;
     }
 
-    return 'http://localhost:5000/api/v1';
+    return 'http://localhost:3000/api/v1';
   }
 
   static String get websocketUrl {
