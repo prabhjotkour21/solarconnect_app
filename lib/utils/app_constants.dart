@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 /// App-wide constants.
-///
-/// Rule: if a value appears more than once, it belongs here.
+/// Rule: if a value appears m
+///ore than once, it belongs here.
 abstract class AppConstants {
   // ── App identity ───────────────────────────────────────────────────────────
   static const String appName = 'SolarConnect';
@@ -15,9 +15,9 @@ abstract class AppConstants {
       return 'http://localhost:5000/api/v1';
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:3000/api/v1';
+      //return 'http://10.0.2.2:3000/api/v1';
       //192.168.1.5
-      // return 'http://192.168.1.12:3000/api/v1';
+      return 'http://192.168.1.5:3000/api/v1';
     }
     return 'http://localhost:5000/api/v1';
   }
