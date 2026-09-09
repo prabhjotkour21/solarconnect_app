@@ -19,7 +19,7 @@ class DeviceRegisterScreen extends StatefulWidget {
 
 class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
   final TextEditingController _serialController = TextEditingController();
-  final TextEditingController _macController = TextEditingController();
+  final TextEditingController _deviceIdController = TextEditingController();
   final TextEditingController _firmwareController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -62,13 +62,18 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
 
   Future<void> _registerDevice() async {
     final serial = _serialController.text.trim();
-    final mac = _macController.text.trim();
+    final deviceId = _deviceIdController.text.trim().toUpperCase();
     final firmware = _firmwareController.text.trim();
     final location = _locationController.text.trim();
     final description = _descriptionController.text.trim();
 
-    if (serial.isEmpty || mac.isEmpty) {
-      AppDialogs.showErrorSnackBar(context, 'Serial number and MAC address are required.');
+    if (serial.isEmpty || deviceId.isEmpty) {
+      AppDialogs.showErrorSnackBar(context, 'Serial number and device ID are required.');
+      return;
+    }
+
+    if (!RegExp(r'^DISP_[0-9]{4,}$').hasMatch(deviceId)) {
+      AppDialogs.showErrorSnackBar(context, 'Device ID must be in the format DISP_0001');
       return;
     }
 
@@ -87,7 +92,7 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
     try {
       final response = await ServiceLocator.instance.deviceService.registerDevice(
         serialNumber: serial,
-        macAddress: mac,
+        deviceId: deviceId,
         firmwareVersion: firmware.isEmpty ? null : firmware,
         location: location.isEmpty ? null : location,
         description: description.isEmpty ? null : description,
@@ -125,7 +130,7 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
         );
       }
       _serialController.clear();
-      _macController.clear();
+      _deviceIdController.clear();
       _firmwareController.clear();
       _locationController.clear();
       _descriptionController.clear();
@@ -285,7 +290,7 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
               children: [
             _buildTextField(_serialController, 'Serial Number', 'ESP32-SN-00124'),
             const SizedBox(height: AppConstants.paddingSM),
-            _buildTextField(_macController, 'MAC Address', 'A4:CF:12:7E:2A:3B'),
+            _buildTextField(_deviceIdController, 'Device ID', 'DISP_0001'),
             const SizedBox(height: AppConstants.paddingSM),
             _buildTextField(_firmwareController, 'Firmware Version', '2.1.4'),
             const SizedBox(height: AppConstants.paddingSM),
@@ -410,7 +415,7 @@ class _DeviceRegisterScreenState extends State<DeviceRegisterScreen> {
   @override
   void dispose() {
     _serialController.dispose();
-    _macController.dispose();
+    _deviceIdController.dispose();
     _firmwareController.dispose();
     _locationController.dispose();
     _descriptionController.dispose();
