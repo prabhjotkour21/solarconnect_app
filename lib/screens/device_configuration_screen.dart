@@ -29,12 +29,17 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
   GeneratedConfigurationFile? _generatedFile;
   int _transferredBytes = 0;
   int _currentChunk = 0;
+  int _transferAttempts = 0;
+  final List<TransferErrorHistoryEntry> _errorHistory = <TransferErrorHistoryEntry>[];
   String _transferMessage = 'Change parameters and press Send to generate a configuration file.';
   String? _transferError;
   Timer? _transferTimer;
   bool get _hasChanges => _editedValues.isNotEmpty;
   bool get _canSend => _hasChanges && !_sending && _validationErrors.values.every((error) => error == null);
-  bool get _deviceReady => _status['isOnline'] == true || _status['connectionStatus'] == 'online';
+  bool get _deviceReady {
+    final evaluation = TransferDeviceStatusEvaluator.evaluate(_status);
+    return evaluation.isReady;
+  }
 
   @override
   void initState() { super.initState(); _loadDevices(); }
@@ -113,17 +118,73 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
     _changeValue(parameter, '');
   }
 
-  Future<void> _sendParameters() async {
-    for (final parameter in _parameters) _changeValue(parameter, _controllerFor(parameter).text);
-    if (!_canSend || _selectedDeviceId == null) return;
-    if (!_deviceReady) {
+  void _registerTransferError(String code, {String? message, bool manualActionRequired = false}) {
+    final reason = TransferFailureReason.fromCode(code);
+    final finalMessage = message ?? reason.message;
+    _errorHistory.insert(0, TransferErrorHistoryEntry(
+      code: reason.code,
+      message: finalMessage,
+      timestamp: DateTime.now(),
+    ));
+    if (_errorHistory.length > 5) {
+      _errorHistory.removeRange(5, _errorHistory.length);
+    }
+    if (manualActionRequired || reason.requiresManualAction) {
+      _transferStatus = ConfigurationTransferStatus.failed;
+      _transferError = finalMessage;
+      _transferMessage = 'Manual action required';
+    }
+  }
+
+  void _handlePreTransferStatus() {
+    final evaluation = TransferDeviceStatusEvaluator.evaluate(_status);
+    if (!evaluation.isReady) {
+      _registerTransferError(evaluation.failureCode ?? 'DEVICE_INACTIVE', message: evaluation.message, manualActionRequired: evaluation.failureCode == 'DEVICE_INACTIVE');
       setState(() {
         _transferStatus = ConfigurationTransferStatus.failed;
-        _transferError = 'ESP32 is not active or connected. Connect the device and retry.';
+        _transferError = evaluation.message;
         _transferMessage = 'Device unavailable';
+        _sending = false;
       });
       return;
     }
+  }
+
+  void _handleTransferFailure(String code, {String? overrideMessage}) {
+    final reason = TransferFailureReason.fromCode(code);
+    final message = overrideMessage ?? reason.message;
+    _registerTransferError(code, message: message, manualActionRequired: reason.requiresManualAction);
+    final policy = TransferRetryPolicy();
+    final shouldRetry = policy.shouldRetry(reason) && _transferAttempts < policy.maxAttempts;
+
+    setState(() {
+      _sending = false;
+      _transferStatus = shouldRetry ? ConfigurationTransferStatus.retryPending : ConfigurationTransferStatus.failed;
+      _transferError = message;
+      _transferMessage = shouldRetry
+          ? 'Retrying in ${policy.delayForAttempt(_transferAttempts + 1) ~/ 1000}s (attempt ${_transferAttempts + 1} of ${policy.maxAttempts})...'
+          : 'Transfer failed';
+    });
+
+    if (shouldRetry) {
+      _transferAttempts += 1;
+      final delayMs = policy.delayForAttempt(_transferAttempts);
+      Future<void>.delayed(Duration(milliseconds: delayMs), () {
+        if (!mounted || _generatedFile == null) return;
+        setState(() {
+          _transferStatus = ConfigurationTransferStatus.retryPending;
+          _transferMessage = 'Retrying transfer...';
+        });
+        _startTransfer(_generatedFile!);
+      });
+    }
+  }
+
+  Future<void> _sendParameters() async {
+    for (final parameter in _parameters) _changeValue(parameter, _controllerFor(parameter).text);
+    if (!_canSend || _selectedDeviceId == null) return;
+    _handlePreTransferStatus();
+    if (!mounted || !_deviceReady) return;
     setState(() {
       _sending = true;
       _sendMessage = null;
@@ -131,6 +192,7 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
       _generatedFile = null;
       _transferredBytes = 0;
       _currentChunk = 0;
+      _transferAttempts = 0;
       _transferStatus = ConfigurationTransferStatus.generating;
       _transferMessage = 'Validating parameters and generating configuration file...';
     });
@@ -153,6 +215,8 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
         _transferMessage = 'Configuration generated. Waiting for ESP32 acknowledgement...';
         _sendMessage = 'Configuration file generated successfully.';
       });
+      _handlePreTransferStatus();
+      if (!mounted || !_deviceReady) return;
       _startTransfer(generatedFile);
     } catch (error) {
       if (mounted) setState(() {
@@ -168,6 +232,11 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
 
   void _startTransfer(GeneratedConfigurationFile file) {
     _transferTimer?.cancel();
+    final evaluation = TransferDeviceStatusEvaluator.evaluate(_status);
+    if (!evaluation.isReady) {
+      _handlePreTransferStatus();
+      return;
+    }
     setState(() {
       _sending = true;
       _transferStatus = ConfigurationTransferStatus.transferring;
@@ -199,6 +268,20 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
     });
     await Future<void>.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
+
+    final checksumMatches = file.checksum.isNotEmpty && file.checksum.length >= 8;
+    final sizeMatches = file.fileSize > 0 && _transferredBytes == file.fileSize;
+
+    if (!checksumMatches) {
+      _handleTransferFailure('CHECKSUM_MISMATCH', overrideMessage: 'ESP32 reported a checksum mismatch. Retry the transfer after verifying the generated file.');
+      return;
+    }
+
+    if (!sizeMatches) {
+      _handleTransferFailure('SIZE_MISMATCH', overrideMessage: 'The file size received by the ESP32 does not match the expected upload size.');
+      return;
+    }
+
     setState(() {
       _sending = false;
       _transferStatus = ConfigurationTransferStatus.completed;
@@ -228,6 +311,7 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
       _sendParameters();
       return;
     }
+    _transferAttempts = 0;
     setState(() {
       _transferStatus = ConfigurationTransferStatus.retryPending;
       _transferError = null;
@@ -262,6 +346,20 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
           onChanged: (id) { if (id != null) _selectDevice(id); },
         ),
         if (selected != null) _StatusSection(device: selected!, status: _status),
+        if (_errorHistory.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Recent error history', style: AppTextStyles.headingSmall),
+            const SizedBox(height: 8),
+            ..._errorHistory.map((entry) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(child: Text('${entry.code}: ${entry.message}')),
+                Text('${entry.timestamp.toLocal().toString().split(' ')[1].substring(0, 5)}', style: AppTextStyles.bodySmall),
+              ]),
+            )),
+          ]))),
+        ],
         if (_loading && _devices.isNotEmpty) const Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator())),
         if (!_loading && _parameters.isNotEmpty) ...[
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Parameters', style: AppTextStyles.headingSmall), Text(_hasChanges ? '${_editedValues.length} modified' : 'No changes', style: TextStyle(color: _hasChanges ? AppColors.warning : AppColors.success))]),
@@ -319,7 +417,10 @@ class _StatusSection extends StatelessWidget {
     return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('Device status', style: AppTextStyles.headingSmall), const SizedBox(height: 10),
       Text('Name: ${device['name'] ?? device['serialNumber'] ?? 'Unnamed device'}'), Text('Device ID: ${device['id'] ?? device['_id'] ?? '-'}'),
-      Text('Connection: ${online ? 'Online' : (status['connectionStatus'] ?? device['status'] ?? 'Unknown')}'), Text('Last heartbeat: ${status['lastHeartbeatAt'] ?? 'Not available'}'),
+      Text('Connection: ${online ? 'Online' : (status['connectionStatus'] ?? device['status'] ?? 'Unknown')}'),
+      Text('Status: ${status['status'] ?? status['deviceStatus'] ?? device['status'] ?? 'Unknown'}'),
+      Text('Transfer readiness: ${TransferDeviceStatusEvaluator.evaluate(status).message}'),
+      Text('Last heartbeat: ${status['lastHeartbeatAt'] ?? 'Not available'}'),
       Text('Heartbeats: ${status['heartbeatCount'] ?? '-'}  |  Timeouts: ${status['timeoutCount'] ?? '-'}'),
     ])));
   }
