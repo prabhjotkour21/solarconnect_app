@@ -57,7 +57,8 @@ class GeneratedConfigurationFile {
   final String fileType;
 
   factory GeneratedConfigurationFile.fromJson(Map<String, dynamic> json) {
-    int number(dynamic value) => value is num ? value.toInt() : int.tryParse('$value') ?? 0;
+    int number(dynamic value) =>
+        value is num ? value.toInt() : int.tryParse('$value') ?? 0;
     return GeneratedConfigurationFile(
       fileId: '${json['fileId'] ?? ''}',
       fileName: '${json['fileName'] ?? 'configuration.bin'}',
@@ -91,12 +92,31 @@ class TransferDeviceStatusEvaluation {
   final String? failureCode;
 
   static TransferDeviceStatusEvaluation evaluate(Map<String, dynamic> status) {
-    final rawStatus = (status['status'] ?? status['deviceStatus'] ?? status['state'] ?? '').toString().toLowerCase();
-    final rawConnection = (status['connectionStatus'] ?? status['deviceConnectionStatus'] ?? '').toString().toLowerCase();
-    final isActive = status['isActive'] == true || status['active'] == true || rawStatus == 'active';
-    final isConnected = status['isOnline'] == true || status['connected'] == true || rawConnection == 'online' || rawConnection == 'connected';
-    final isReadyForTransfer = status['isReady'] == true || status['ready'] == true || rawStatus == 'ready';
-    final isBusy = status['isBusy'] == true || status['busy'] == true || rawStatus == 'busy';
+    final rawStatus =
+        (status['status'] ?? status['deviceStatus'] ?? status['state'] ?? '')
+            .toString()
+            .toLowerCase();
+    final rawConnection =
+        (status['connectionStatus'] ?? status['deviceConnectionStatus'] ?? '')
+            .toString()
+            .toLowerCase();
+    final isActive =
+        status['isActive'] == true ||
+        status['active'] == true ||
+        rawStatus == 'active';
+    final isConnected =
+        status['isOnline'] == true ||
+        status['connected'] == true ||
+        rawConnection == 'online' ||
+        rawConnection == 'connected';
+    final isReadyForTransfer =
+        status['isReady'] == true ||
+        status['ready'] == true ||
+        rawStatus == 'ready';
+    final isBusy =
+        status['isBusy'] == true ||
+        status['busy'] == true ||
+        rawStatus == 'busy';
 
     if (isBusy) {
       return const TransferDeviceStatusEvaluation(
@@ -104,7 +124,8 @@ class TransferDeviceStatusEvaluation {
         isActive: true,
         isConnected: true,
         isBusy: true,
-        message: 'The ESP32 is currently busy. Please wait for the current task to finish and retry.',
+        message:
+            'The ESP32 is currently busy. Please wait for the current task to finish and retry.',
         failureCode: 'DEVICE_BUSY',
       );
     }
@@ -115,7 +136,8 @@ class TransferDeviceStatusEvaluation {
         isActive: false,
         isConnected: false,
         isBusy: false,
-        message: 'The ESP32 is inactive. Activate the device and reconnect before starting a file transfer.',
+        message:
+            'The ESP32 is inactive. Activate the device and reconnect before starting a file transfer.',
         failureCode: 'DEVICE_INACTIVE',
       );
     }
@@ -126,7 +148,8 @@ class TransferDeviceStatusEvaluation {
         isActive: true,
         isConnected: false,
         isBusy: false,
-        message: 'The ESP32 is not connected. Check the Wi-Fi or Bluetooth connection and retry.',
+        message:
+            'The ESP32 is not connected. Check the Wi-Fi or Bluetooth connection and retry.',
         failureCode: 'TEMPORARY_DISCONNECTION',
       );
     }
@@ -137,7 +160,8 @@ class TransferDeviceStatusEvaluation {
         isActive: true,
         isConnected: true,
         isBusy: false,
-        message: 'The ESP32 is not ready to receive a file yet. Wait until its transfer state is clear.',
+        message:
+            'The ESP32 is not ready to receive a file yet. Wait until its transfer state is clear.',
         failureCode: 'DEVICE_NOT_READY',
       );
     }
@@ -188,19 +212,22 @@ class TransferFailureReason {
       case 'INVALID_FILE_TYPE':
         return const TransferFailureReason(
           code: 'INVALID_FILE_TYPE',
-          message: 'The uploaded file type is invalid for this device configuration transfer.',
+          message:
+              'The uploaded file type is invalid for this device configuration transfer.',
           isRetryable: false,
         );
       case 'DEVICE_INACTIVE':
         return const TransferFailureReason(
           code: 'DEVICE_INACTIVE',
-          message: 'The device is inactive and cannot receive a configuration update.',
+          message:
+              'The device is inactive and cannot receive a configuration update.',
           isRetryable: false,
         );
       case 'NETWORK_TIMEOUT':
         return const TransferFailureReason(
           code: 'NETWORK_TIMEOUT',
-          message: 'The network timed out while transmitting the configuration file.',
+          message:
+              'The network timed out while transmitting the configuration file.',
           isRetryable: true,
         );
       case 'ESP32_RESPONSE_TIMEOUT':
@@ -212,41 +239,47 @@ class TransferFailureReason {
       case 'TEMPORARY_DISCONNECTION':
         return const TransferFailureReason(
           code: 'TEMPORARY_DISCONNECTION',
-          message: 'The device connection dropped briefly, and the transfer will retry automatically.',
+          message:
+              'The device connection dropped briefly, and the transfer will retry automatically.',
           isRetryable: true,
         );
       case 'SIZE_MISMATCH':
         return const TransferFailureReason(
           code: 'SIZE_MISMATCH',
-          message: 'The received file size does not match the expected transfer size.',
+          message:
+              'The received file size does not match the expected transfer size.',
           isRetryable: false,
           requiresManualAction: true,
         );
       case 'CHECKSUM_MISMATCH':
         return const TransferFailureReason(
           code: 'CHECKSUM_MISMATCH',
-          message: 'The transmitted file checksum does not match the expected checksum.',
+          message:
+              'The transmitted file checksum does not match the expected checksum.',
           isRetryable: false,
           requiresManualAction: true,
         );
       case 'OUT_OF_RANGE':
         return const TransferFailureReason(
           code: 'OUT_OF_RANGE',
-          message: 'One or more parameter values are outside the valid range for this device.',
+          message:
+              'One or more parameter values are outside the valid range for this device.',
           isRetryable: false,
           requiresManualAction: true,
         );
       case 'INSUFFICIENT_STORAGE':
         return const TransferFailureReason(
           code: 'INSUFFICIENT_STORAGE',
-          message: 'The ESP32 does not have enough storage remaining to accept the new configuration.',
+          message:
+              'The ESP32 does not have enough storage remaining to accept the new configuration.',
           isRetryable: false,
           requiresManualAction: true,
         );
       default:
         return const TransferFailureReason(
           code: 'TRANSFER_FAILED',
-          message: 'The configuration transfer failed. Please check the device status and retry.',
+          message:
+              'The configuration transfer failed. Please check the device status and retry.',
           isRetryable: true,
         );
     }
@@ -254,10 +287,10 @@ class TransferFailureReason {
 }
 
 class TransferRetryPolicy {
-  static const int maxAttempts = 3;
+  static const int _maxAttempts = 3;
   static const int baseDelayMs = 1000;
 
-  int get maxAttempts => TransferRetryPolicy.maxAttempts;
+  int get maxAttempts => TransferRetryPolicy._maxAttempts;
 
   int delayForAttempt(int attempt) {
     if (attempt <= 1) return baseDelayMs;
@@ -265,7 +298,10 @@ class TransferRetryPolicy {
   }
 
   bool shouldRetry(TransferFailureReason reason) {
-    return reason.isRetryable && reason.code != 'DEVICE_INACTIVE' && reason.code != 'FILE_TOO_LARGE' && reason.code != 'INVALID_FILE_TYPE';
+    return reason.isRetryable &&
+        reason.code != 'DEVICE_INACTIVE' &&
+        reason.code != 'FILE_TOO_LARGE' &&
+        reason.code != 'INVALID_FILE_TYPE';
   }
 }
 
@@ -280,4 +316,3 @@ class TransferErrorHistoryEntry {
   final String message;
   final DateTime timestamp;
 }
-
