@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/configuration_transfer.dart';
 import '../models/device_parameter.dart';
@@ -26,14 +25,9 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
   String? _sendMessage;
   bool _sending = false;
   ConfigurationTransferStatus _transferStatus = ConfigurationTransferStatus.idle;
-  GeneratedConfigurationFile? _generatedFile;
-  int _transferredBytes = 0;
-  int _currentChunk = 0;
-  int _transferAttempts = 0;
   final List<TransferErrorHistoryEntry> _errorHistory = <TransferErrorHistoryEntry>[];
-  String _transferMessage = 'Change parameters and press Send to generate a configuration file.';
+  String _transferMessage = 'Change parameters and press Send to send validated values.';
   String? _transferError;
-  Timer? _transferTimer;
   bool get _hasChanges => _editedValues.isNotEmpty;
   bool get _canSend => _hasChanges && !_sending && _validationErrors.values.every((error) => error == null);
   bool get _deviceReady {
@@ -155,29 +149,14 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
     final message = overrideMessage ?? reason.message;
     _registerTransferError(code, message: message, manualActionRequired: reason.requiresManualAction);
     final policy = TransferRetryPolicy();
-    final shouldRetry = policy.shouldRetry(reason) && _transferAttempts < policy.maxAttempts;
+    final shouldRetry = policy.shouldRetry(reason);
 
     setState(() {
       _sending = false;
       _transferStatus = shouldRetry ? ConfigurationTransferStatus.retryPending : ConfigurationTransferStatus.failed;
       _transferError = message;
-      _transferMessage = shouldRetry
-          ? 'Retrying in ${policy.delayForAttempt(_transferAttempts + 1) ~/ 1000}s (attempt ${_transferAttempts + 1} of ${policy.maxAttempts})...'
-          : 'Transfer failed';
+      _transferMessage = shouldRetry ? 'The value can be retried after the device is ready.' : 'Value send failed';
     });
-
-    if (shouldRetry) {
-      _transferAttempts += 1;
-      final delayMs = policy.delayForAttempt(_transferAttempts);
-      Future<void>.delayed(Duration(milliseconds: delayMs), () {
-        if (!mounted || _generatedFile == null) return;
-        setState(() {
-          _transferStatus = ConfigurationTransferStatus.retryPending;
-          _transferMessage = 'Retrying transfer...';
-        });
-        _startTransfer(_generatedFile!);
-      });
-    }
   }
 
   Future<void> _sendParameters() async {
@@ -189,12 +168,8 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
       _sending = true;
       _sendMessage = null;
       _transferError = null;
-      _generatedFile = null;
-      _transferredBytes = 0;
-      _currentChunk = 0;
-      _transferAttempts = 0;
-      _transferStatus = ConfigurationTransferStatus.generating;
-      _transferMessage = 'Validating parameters and generating configuration file...';
+      _transferStatus = ConfigurationTransferStatus.transferring;
+      _transferMessage = 'Validating values and sending them to ESP32...';
     });
     try {
       final token = await ServiceLocator.instance.authService.getStoredToken();
@@ -202,132 +177,40 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
       final items = _parameters.where((parameter) => _controllerFor(parameter).text.trim().isNotEmpty).map((parameter) => {'parameterNumber': parameter.parameterNumber, 'value': _typedValue(parameter, _controllerFor(parameter).text)}).toList();
       final response = await ServiceLocator.instance.parameterService.validateParameters(_selectedDeviceId!, token, items);
       if (response['valid'] != true) throw Exception('One or more parameter values failed server validation.');
-      final generatedResponse = await ServiceLocator.instance.parameterService.generateConfiguration(_selectedDeviceId!, token, items);
-      if (generatedResponse['valid'] != true || (generatedResponse['changedCount'] ?? 0) == 0) {
-        throw Exception(generatedResponse['message']?.toString() ?? 'No changed parameters to generate.');
+      final changed = items.where((item) => _editedValues.containsKey(item['parameterNumber'])).toList();
+      if (changed.isEmpty) throw Exception('No changed parameter values to send.');
+      for (final item in changed) {
+        final result = await ServiceLocator.instance.parameterService.sendParameter(
+          _selectedDeviceId!,
+          token,
+          parameterNumber: item['parameterNumber'] as int,
+          value: '${item['value']}',
+        );
+        if (result['status']?.toString().toUpperCase() != 'APPLIED') {
+          throw Exception(result['message']?.toString() ?? 'ESP32 rejected the parameter value.');
+        }
       }
-      final generatedFile = GeneratedConfigurationFile.fromJson(generatedResponse);
-      if (generatedFile.fileSize <= 0 || generatedFile.totalChunks <= 0) throw Exception('Generated configuration file is empty.');
-      if (!mounted) return;
-      setState(() {
-        _generatedFile = generatedFile;
-        _transferStatus = ConfigurationTransferStatus.waitingForDevice;
-        _transferMessage = 'Configuration generated. Waiting for ESP32 acknowledgement...';
-        _sendMessage = 'Configuration file generated successfully.';
+      if (mounted) setState(() {
+        _sending = false;
+        _transferStatus = ConfigurationTransferStatus.completed;
+        _transferMessage = 'ESP32 acknowledged all parameter values.';
+        _sendMessage = 'Values sent successfully.';
+        _editedValues.clear();
       });
-      _handlePreTransferStatus();
-      if (!mounted || !_deviceReady) return;
-      _startTransfer(generatedFile);
     } catch (error) {
       if (mounted) setState(() {
         _transferStatus = ConfigurationTransferStatus.failed;
         _transferError = error.toString().replaceFirst('Exception: ', '');
-        _transferMessage = 'Configuration generation failed.';
+        _transferMessage = 'ESP32 value send failed.';
         _sendMessage = _transferError;
       });
     } finally {
-      if (mounted && _transferStatus != ConfigurationTransferStatus.transferring) setState(() => _sending = false);
+      if (mounted) setState(() => _sending = false);
     }
-  }
-
-  void _startTransfer(GeneratedConfigurationFile file) {
-    _transferTimer?.cancel();
-    final evaluation = TransferDeviceStatusEvaluator.evaluate(_status);
-    if (!evaluation.isReady) {
-      _handlePreTransferStatus();
-      return;
-    }
-    setState(() {
-      _sending = true;
-      _transferStatus = ConfigurationTransferStatus.transferring;
-      _transferMessage = 'ESP32 acknowledged the file header. Sending chunks...';
-    });
-    _transferTimer = Timer.periodic(const Duration(milliseconds: 180), (timer) {
-      if (!mounted || _transferStatus != ConfigurationTransferStatus.transferring) {
-        timer.cancel();
-        return;
-      }
-      final nextChunk = _currentChunk + 1;
-      final nextBytes = (nextChunk * file.chunkSize).clamp(0, file.fileSize);
-      setState(() {
-        _currentChunk = nextChunk;
-        _transferredBytes = nextBytes;
-        _transferMessage = 'ESP32 acknowledged chunk $nextChunk of ${file.totalChunks}.';
-      });
-      if (nextChunk >= file.totalChunks) {
-        timer.cancel();
-        _verifyTransfer(file);
-      }
-    });
-  }
-
-  Future<void> _verifyTransfer(GeneratedConfigurationFile file) async {
-    setState(() {
-      _transferStatus = ConfigurationTransferStatus.verifying;
-      _transferMessage = 'ESP32 is verifying the SHA-256 checksum...';
-    });
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-    if (!mounted) return;
-
-    final checksumMatches = file.checksum.isNotEmpty && file.checksum.length >= 8;
-    final sizeMatches = file.fileSize > 0 && _transferredBytes == file.fileSize;
-
-    if (!checksumMatches) {
-      _handleTransferFailure('CHECKSUM_MISMATCH', overrideMessage: 'ESP32 reported a checksum mismatch. Retry the transfer after verifying the generated file.');
-      return;
-    }
-
-    if (!sizeMatches) {
-      _handleTransferFailure('SIZE_MISMATCH', overrideMessage: 'The file size received by the ESP32 does not match the expected upload size.');
-      return;
-    }
-
-    setState(() {
-      _sending = false;
-      _transferStatus = ConfigurationTransferStatus.completed;
-      _transferMessage = 'ESP32 acknowledged the configuration and checksum verification passed.';
-      _sendMessage = 'Configuration transferred successfully.';
-    });
-  }
-
-  void _pauseTransfer() {
-    _transferTimer?.cancel();
-    setState(() {
-      _sending = false;
-      _transferStatus = ConfigurationTransferStatus.paused;
-      _transferMessage = 'Transfer paused. Resume or retry when the ESP32 is ready.';
-    });
-  }
-
-  void _resumeTransfer() {
-    final file = _generatedFile;
-    if (file == null) return;
-    _startTransfer(file);
-  }
-
-  void _retryTransfer() {
-    final file = _generatedFile;
-    if (file == null) {
-      _sendParameters();
-      return;
-    }
-    _transferAttempts = 0;
-    setState(() {
-      _transferStatus = ConfigurationTransferStatus.retryPending;
-      _transferError = null;
-      _transferredBytes = 0;
-      _currentChunk = 0;
-      _transferMessage = 'Retrying transfer and waiting for ESP32 acknowledgement...';
-    });
-    _startTransfer(file);
-  }
-
-  void _previewFile(GeneratedConfigurationFile file) {
-    showDialog<void>(context: context, builder: (context) => AlertDialog(title: Text(file.fileName), content: SelectableText('Type: ${file.fileType}\nSize: ${file.fileSize} bytes\nSHA-256: ${file.checksum}\nChunks: ${file.totalChunks}'), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))]));
   }
 
   @override
-  void dispose() { _transferTimer?.cancel(); for (final controller in _controllers.values) controller.dispose(); super.dispose(); }
+  void dispose() { for (final controller in _controllers.values) controller.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
@@ -368,22 +251,8 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
           if (_sendMessage != null) Text(_sendMessage!, style: TextStyle(color: _sendMessage!.startsWith('All') ? AppColors.success : AppColors.error)),
           const SizedBox(height: 8),
           Align(alignment: Alignment.centerRight, child: FilledButton.icon(onPressed: _canSend ? _sendParameters : null, icon: _sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send_rounded), label: const Text('Send'))),
-          if (_generatedFile != null) ...[
-            const SizedBox(height: 16),
-            _GeneratedFileSection(file: _generatedFile!, onPreview: () => _previewFile(_generatedFile!)),
-            const SizedBox(height: 12),
-            _TransferProgressSection(
-              file: _generatedFile!,
-              transferredBytes: _transferredBytes,
-              currentChunk: _currentChunk,
-              status: _transferStatus,
-              message: _transferMessage,
-              error: _transferError,
-              onPause: _transferStatus == ConfigurationTransferStatus.transferring ? _pauseTransfer : null,
-              onResume: _transferStatus == ConfigurationTransferStatus.paused ? _resumeTransfer : null,
-              onRetry: _transferStatus == ConfigurationTransferStatus.failed || _transferStatus == ConfigurationTransferStatus.completed ? _retryTransfer : null,
-            ),
-          ],
+          const SizedBox(height: 12),
+          _ParameterSendStatus(status: _transferStatus, message: _transferMessage, error: _transferError),
         ],
       ])),
     );
@@ -426,63 +295,28 @@ class _StatusSection extends StatelessWidget {
   }
 }
 
-class _GeneratedFileSection extends StatelessWidget {
-  const _GeneratedFileSection({required this.file, required this.onPreview});
-  final GeneratedConfigurationFile file;
-  final VoidCallback onPreview;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [const Icon(Icons.description_outlined), const SizedBox(width: 8), Expanded(child: Text('Generated configuration', style: AppTextStyles.headingSmall)), TextButton.icon(onPressed: onPreview, icon: const Icon(Icons.visibility_outlined, size: 18), label: const Text('Preview'))]),
-      const SizedBox(height: 10),
-      _metadataRow('File name', file.fileName),
-      _metadataRow('File type', file.fileType),
-      _metadataRow('File size', '${file.fileSize} bytes (${file.sizeInKilobytes.toStringAsFixed(2)} KB)'),
-      _metadataRow('Checksum', file.checksum.isEmpty ? 'Unavailable' : '${file.checksum.substring(0, file.checksum.length > 16 ? 16 : file.checksum.length)}...'),
-      _metadataRow('Generation status', 'Generated'),
-    ])));
-  }
-
-  Widget _metadataRow(String label, String value) => Padding(padding: const EdgeInsets.only(bottom: 6), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 130, child: Text(label, style: AppTextStyles.bodySmall)), Expanded(child: Text(value))]));
-}
-
-class _TransferProgressSection extends StatelessWidget {
-  const _TransferProgressSection({required this.file, required this.transferredBytes, required this.currentChunk, required this.status, required this.message, this.error, this.onPause, this.onResume, this.onRetry});
-  final GeneratedConfigurationFile file;
-  final int transferredBytes;
-  final int currentChunk;
+class _ParameterSendStatus extends StatelessWidget {
+  const _ParameterSendStatus({required this.status, required this.message, this.error});
   final ConfigurationTransferStatus status;
   final String message;
   final String? error;
-  final VoidCallback? onPause;
-  final VoidCallback? onResume;
-  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
-    final progress = file.fileSize == 0 ? 0.0 : (transferredBytes / file.fileSize).clamp(0.0, 1.0);
-    final percent = (progress * 100).toStringAsFixed(0);
-    final color = status == ConfigurationTransferStatus.failed ? AppColors.error : status == ConfigurationTransferStatus.completed ? AppColors.success : AppColors.primary;
-    return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [const Icon(Icons.sync_rounded), const SizedBox(width: 8), Expanded(child: Text('Transfer activity', style: AppTextStyles.headingSmall)), Text(status.label, style: TextStyle(color: color, fontWeight: FontWeight.w600))]),
-      const SizedBox(height: 12),
-      LinearProgressIndicator(value: progress, minHeight: 8, color: color),
-      const SizedBox(height: 8),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('$transferredBytes / ${file.fileSize} bytes'), Text('$percent%')]),
-      const SizedBox(height: 6),
-      Text('Chunk $currentChunk / ${file.totalChunks}  |  ${file.chunkSize} bytes per chunk', style: AppTextStyles.bodySmall),
-      const SizedBox(height: 10),
-      Text(message, style: TextStyle(color: color)),
-      if (error != null) ...[const SizedBox(height: 6), Text(error!, style: TextStyle(color: AppColors.error))],
-      if (onPause != null || onResume != null || onRetry != null) ...[
-        const SizedBox(height: 10),
-        Wrap(spacing: 8, children: [
-          if (onPause != null) OutlinedButton.icon(onPressed: onPause, icon: const Icon(Icons.pause_rounded), label: const Text('Pause')),
-          if (onResume != null) FilledButton.icon(onPressed: onResume, icon: const Icon(Icons.play_arrow_rounded), label: const Text('Resume')),
-          if (onRetry != null) OutlinedButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh_rounded), label: const Text('Retry')),
-        ]),
-      ],
+    final color = status == ConfigurationTransferStatus.failed
+        ? AppColors.error
+        : status == ConfigurationTransferStatus.completed
+            ? AppColors.success
+            : AppColors.primary;
+    return Card(child: Padding(padding: const EdgeInsets.all(16), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(status == ConfigurationTransferStatus.completed ? Icons.check_circle_outline : Icons.send_rounded, color: color),
+      const SizedBox(width: 10),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Parameter send status: ${status.label}', style: AppTextStyles.headingSmall),
+        const SizedBox(height: 6),
+        Text(message, style: TextStyle(color: color)),
+        if (error != null) ...[const SizedBox(height: 6), Text(error!, style: TextStyle(color: AppColors.error))],
+      ])),
     ])));
   }
 }
