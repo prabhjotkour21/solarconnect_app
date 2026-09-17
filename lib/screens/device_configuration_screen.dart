@@ -31,7 +31,10 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
   bool get _hasChanges => _editedValues.isNotEmpty;
   bool get _canSend => _hasChanges && !_sending && _validationErrors.values.every((error) => error == null);
   bool get _deviceReady {
-    final evaluation = TransferDeviceStatusEvaluator.evaluate(_status);
+    final evaluation = TransferDeviceStatusEvaluator.evaluate(
+      _status,
+      requireTransferReady: false,
+    );
     return evaluation.isReady;
   }
 
@@ -131,7 +134,10 @@ class _DeviceConfigurationScreenState extends State<DeviceConfigurationScreen> {
   }
 
   void _handlePreTransferStatus() {
-    final evaluation = TransferDeviceStatusEvaluator.evaluate(_status);
+    final evaluation = TransferDeviceStatusEvaluator.evaluate(
+      _status,
+      requireTransferReady: false,
+    );
     if (!evaluation.isReady) {
       _registerTransferError(evaluation.failureCode ?? 'DEVICE_INACTIVE', message: evaluation.message, manualActionRequired: evaluation.failureCode == 'DEVICE_INACTIVE');
       setState(() {
@@ -288,7 +294,7 @@ class _StatusSection extends StatelessWidget {
       Text('Name: ${device['name'] ?? device['serialNumber'] ?? 'Unnamed device'}'), Text('Device ID: ${device['id'] ?? device['_id'] ?? '-'}'),
       Text('Connection: ${online ? 'Online' : (status['connectionStatus'] ?? device['status'] ?? 'Unknown')}'),
       Text('Status: ${status['status'] ?? status['deviceStatus'] ?? device['status'] ?? 'Unknown'}'),
-      Text('Transfer readiness: ${TransferDeviceStatusEvaluator.evaluate(status).message}'),
+      Text('Parameter send readiness: ${TransferDeviceStatusEvaluator.evaluate(status, requireTransferReady: false).message}'),
       Text('Last heartbeat: ${status['lastHeartbeatAt'] ?? 'Not available'}'),
       Text('Heartbeats: ${status['heartbeatCount'] ?? '-'}  |  Timeouts: ${status['timeoutCount'] ?? '-'}'),
     ])));
