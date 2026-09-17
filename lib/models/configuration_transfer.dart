@@ -91,7 +91,10 @@ class TransferDeviceStatusEvaluation {
   final String message;
   final String? failureCode;
 
-  static TransferDeviceStatusEvaluation evaluate(Map<String, dynamic> status) {
+  static TransferDeviceStatusEvaluation evaluate(
+    Map<String, dynamic> status, {
+    bool requireTransferReady = true,
+  }) {
     final rawStatus =
         (status['status'] ?? status['deviceStatus'] ?? status['state'] ?? '')
             .toString()
@@ -154,7 +157,7 @@ class TransferDeviceStatusEvaluation {
       );
     }
 
-    if (!isReadyForTransfer) {
+    if (requireTransferReady && !isReadyForTransfer) {
       return const TransferDeviceStatusEvaluation(
         isReady: false,
         isActive: true,
