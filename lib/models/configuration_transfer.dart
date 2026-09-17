@@ -180,8 +180,14 @@ class TransferDeviceStatusEvaluation {
 }
 
 class TransferDeviceStatusEvaluator {
-  static TransferDeviceStatusEvaluation evaluate(Map<String, dynamic> status) =>
-      TransferDeviceStatusEvaluation.evaluate(status);
+  static TransferDeviceStatusEvaluation evaluate(
+    Map<String, dynamic> status, {
+    bool requireTransferReady = true,
+  }) =>
+      TransferDeviceStatusEvaluation.evaluate(
+        status,
+        requireTransferReady: requireTransferReady,
+      );
 }
 
 class TransferFailureReason {
